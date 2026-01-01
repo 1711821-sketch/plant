@@ -564,6 +564,7 @@ export const isolationPlanApi = {
     plannedEnd: string;
     actualStart: string;
     actualEnd: string;
+    pointSize: number;
   }>) =>
     request<IsolationPlan>(`/api/isolation-plans/${planId}`, {
       method: 'PUT',

@@ -6,7 +6,6 @@ import type { Terminal, Location, User } from '../types';
 import { ANNOTATION_TYPE_LABELS } from '../types';
 import { useStore } from '../store/useStore';
 import TerminalStats from '../components/TerminalStats';
-import { InspectionTypeBadge } from '../components/InspectionTypeSelector';
 
 interface DiagramInfo {
   id: string;

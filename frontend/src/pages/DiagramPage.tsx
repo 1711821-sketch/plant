@@ -7,7 +7,6 @@ import { Toolbar } from '../components/Toolbar';
 import { DiagramView } from '../components/DiagramView';
 import { Sidebar } from '../components/Sidebar';
 import { IsolationPlanSidebar } from '../components/IsolationPlanSidebar';
-import { InspectionTypeBadge } from '../components/InspectionTypeSelector';
 import type { User, IsolationPoint, IsolationPointType } from '../types';
 import { ANNOTATION_TYPE_LABELS } from '../types';
 
