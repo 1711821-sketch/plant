@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npm init:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(dir \"C:\\Users\\edizu\\Desktop\\Cloud\\Inspektioner\")",
+      "Bash(copy \"C:\\Users\\edizu\\Desktop\\Cloud\\Inspektioner\\OIT31 EG_Q001.pdf\" \"C:\\Users\\edizu\\Desktop\\Cloud\\Inspektioner\\backend\\uploads\"\")",
+      "Bash(curl:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(dir \"C:\\Users\\edizu\\Desktop\\Cloud\\Inspektioner\\frontend\\node_modules\\pdfjs-dist\\build\")",
+      "Bash(cmd /c \"cd C:\\Users\\edizu\\Desktop\\Cloud\\Inspektioner\\frontend && npm run build\")",
+      "Bash(powershell -Command \"cd ''C:\\Users\\edizu\\Desktop\\Cloud\\Inspektioner\\frontend''; npm run build 2>&1\")",
+      "Bash(cmd.exe /c \"cd /d C:\\Users\\edizu\\Desktop\\Cloud\\Inspektioner\\frontend && npm run build\")",
+      "Bash(npm.cmd run build:*)",
+      "Bash(npm.cmd install:*)",
+      "Bash(if exist inspektioner.db del inspektioner.db)",
+      "Bash(del \"C:\\Users\\edizu\\Desktop\\Cloud\\Inspektioner\\backend\\inspektioner.db\")",
+      "Bash(cat:*)",
+      "Bash(npm ls:*)",
+      "Bash(ls:*)",
+      "Bash(dir C:UsersedizuDesktopCloudInspektioner /s /b)",
+      "Bash(findstr:*)",
+      "Bash(sqlite3:*)",
+      "Bash(node -e:*)",
+      "Bash(TOKEN=\"91d20441-6a1b-4d4c-9c48-a489c12cd3a5\")",
+      "Bash(npm run build:fast:*)",
+      "Bash(dir:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(npm start)",
+      "Bash(copy IsolationCanvas.tsx IsolationCanvas2.tsx)",
+      "Bash(if exist \"node_modules\\\\.vite\" rd /s /q \"node_modules\\\\.vite\")",
+      "Bash(git --version:*)",
+      "Bash(git init:*)",
+      "Bash(git config:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
