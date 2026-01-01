@@ -93,3 +93,7 @@ export function InspectionTypeBadge() {
     </div>
   );
 }
+
+export default InspectionTypeSelector;
+
+export { InspectionTypeBadge };

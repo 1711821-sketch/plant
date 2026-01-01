@@ -192,7 +192,7 @@ export function IsolationPlanSidebar({
     onPointSizeChange?.(size);
 
     // Update in backend
-    const { error } = await isolationPlanApi.update(selectedPlanId, { point_size: size });
+    const { error } = await isolationPlanApi.update(selectedPlanId, { pointSize: size });
     if (error) {
       console.error('Failed to update point size:', error);
       // Reload plan to revert on error
