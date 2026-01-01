@@ -7,8 +7,7 @@ import { ANNOTATION_TYPE_LABELS } from '../types';
 import { useStore } from '../store/useStore';
 import DashboardStats from '../components/DashboardStats';
 import SearchBar from '../components/SearchBar';
-import InspectionTypeSelector from '../components/InspectionTypeSelector';
-import InspectionTypeBadge from '../components/InspectionTypeSelector';
+import InspectionTypeSelector, { InspectionTypeBadge } from '../components/InspectionTypeSelector';
 
 export function DashboardPage() {
   const navigate = useNavigate();

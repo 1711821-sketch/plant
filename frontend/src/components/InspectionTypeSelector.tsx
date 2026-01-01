@@ -95,5 +95,3 @@ export function InspectionTypeBadge() {
 }
 
 export default InspectionTypeSelector;
-
-export { InspectionTypeBadge };
