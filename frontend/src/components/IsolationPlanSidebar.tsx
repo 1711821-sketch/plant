@@ -285,7 +285,14 @@ export function IsolationPlanSidebar({
   };
 
   const handleDeletePlan = async (planId: string) => {
-    if (!confirm('Er du sikker paa at du vil slette denne sikringsplan?')) return;
+    const plan = plans.find(p => p.id === planId);
+    const isActivePlan = plan?.status === 'active' || plan?.status === 'approved';
+
+    const confirmMessage = isActivePlan
+      ? 'ADVARSEL: Denne sikringsplan er aktiv/godkendt!\n\nEr du HELT sikker paa at du vil slette den?\nDette kan IKKE fortrydes!'
+      : 'Er du sikker paa at du vil slette denne sikringsplan?';
+
+    if (!confirm(confirmMessage)) return;
 
     const { error } = await isolationPlanApi.delete(planId);
     if (!error) {
@@ -952,7 +959,7 @@ export function IsolationPlanSidebar({
                 <FiPrinter />
               </button>
 
-              {isAdmin && selectedPlan.status === 'draft' && (
+              {isAdmin && (
                 <button
                   className="btn-icon-small danger"
                   onClick={() => handleDeletePlan(selectedPlan.id)}
