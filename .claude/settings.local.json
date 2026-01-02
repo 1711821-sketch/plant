@@ -47,7 +47,17 @@
       "Bash(ssh root@itd1 \"cd /var/www/plant && git pull && cd frontend && npm run build && cd .. && docker compose build --no-cache frontend && docker compose up -d frontend\")",
       "Bash(ssh root@193.181.211.144 \"cd /var/www/plant && git pull && cd frontend && npm run build && cd .. && docker compose build --no-cache frontend && docker compose up -d frontend\")",
       "Bash(sshpass -p 'ZenNGhDbPydW' ssh -o StrictHostKeyChecking=no admin@193.181.211.144 \"echo ''SSH forbindelse OK''\")",
-      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"echo ''SSH forbindelse OK'' && docker ps | grep plant\")"
+      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"echo ''SSH forbindelse OK'' && docker ps | grep plant\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"cd /var/www/plant && git pull && cd frontend && npm run build && cd .. && docker compose build --no-cache frontend && docker compose up -d frontend\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"cd /var/www/plant && docker compose build --no-cache backend && docker compose up -d backend\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"cd /var/www/plant && docker compose ps\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"ps aux | grep node\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"cd /var/www/plant/backend && npm run build && systemctl restart plant-backend\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"systemctl list-units --type=service | grep plant\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"ps aux | grep 1087713\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"kill 1087713 && cd /var/www/plant/backend && node dist/index.js &\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"su - admin -c ''cd /var/www/plant/backend && npm run build && pkill -f \"\"node /var/www/plant/backend/dist/index.js\"\" || true && nohup node dist/index.js > /tmp/plant-backend.log 2>&1 &''\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"ps aux | grep ''node.*plant/backend''\")"
     ]
   }
 }

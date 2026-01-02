@@ -1638,20 +1638,20 @@ body {
   height: 18px;
 }
 
-/* Drawing controls */
+/* Drawing controls - fixed to viewport so they stay visible when panning */
 .drawing-controls {
-  position: absolute;
-  top: 16px;
+  position: fixed;
+  top: calc(var(--header-height) + var(--toolbar-height) + 16px);
   left: 16px;
   display: flex;
   align-items: center;
   gap: 8px;
   background: var(--bg-white);
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-radius: var(--radius);
   border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-md);
-  z-index: 10;
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
 }
 
 .drawing-controls .btn-save {
@@ -1710,10 +1710,10 @@ body {
   margin-left: 8px;
 }
 
-/* Locked mode indicator */
+/* Locked mode indicator - fixed to viewport */
 .locked-indicator {
-  position: absolute;
-  top: 16px;
+  position: fixed;
+  top: calc(var(--header-height) + var(--toolbar-height) + 16px);
   left: 16px;
   background: var(--warning-light);
   color: var(--warning);
@@ -1722,7 +1722,7 @@ body {
   font-size: 0.875rem;
   font-weight: 500;
   box-shadow: var(--shadow-md);
-  z-index: 10;
+  z-index: 100;
   border: 1px solid rgba(202, 138, 4, 0.3);
 }
 
@@ -1783,10 +1783,10 @@ body {
 
 /* Annotation type indicator (read-only badge) */
 .annotation-type-indicator {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 10;
+  position: fixed;
+  top: calc(var(--header-height) + var(--toolbar-height) + 16px);
+  right: calc(var(--sidebar-width) + 16px);
+  z-index: 100;
 }
 
 .annotation-type-indicator .type-badge {
