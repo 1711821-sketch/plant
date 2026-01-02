@@ -553,33 +553,35 @@ function mapIsolationPlan(raw: any): IsolationPlan {
 }
 
 // Helper to map backend isolation point to frontend format
+// Backend returns some fields as camelCase (pointType, tagNumber etc) and some as snake_case
+// We handle both cases here using || fallbacks
 function mapIsolationPoint(raw: any): IsolationPoint {
   return {
     id: raw.id,
-    planId: raw.plan_id,
-    pointType: raw.point_type,
-    tagNumber: raw.tag_number,
+    planId: raw.plan_id || raw.planId,
+    pointType: raw.point_type || raw.pointType,
+    tagNumber: raw.tag_number || raw.tagNumber,
     description: raw.description,
-    sequenceNumber: raw.sequence_number,
-    normalPosition: raw.normal_position,
-    isolatedPosition: raw.isolated_position,
+    sequenceNumber: raw.sequence_number || raw.sequenceNumber,
+    normalPosition: raw.normal_position || raw.normalPosition,
+    isolatedPosition: raw.isolated_position || raw.isolatedPosition,
     x: raw.x,
     y: raw.y,
     color: raw.color,
     status: raw.status,
     label: raw.label,
-    isolatedBy: raw.isolated_by,
-    isolatedByName: raw.isolated_by_name,
-    isolatedAt: raw.isolated_at,
-    verifiedBy: raw.verified_by,
-    verifiedByName: raw.verified_by_name,
-    verifiedAt: raw.verified_at,
-    restoredBy: raw.restored_by,
-    restoredByName: raw.restored_by_name,
-    restoredAt: raw.restored_at,
+    isolatedBy: raw.isolated_by || raw.isolatedBy,
+    isolatedByName: raw.isolated_by_name || raw.isolatedByName,
+    isolatedAt: raw.isolated_at || raw.isolatedAt,
+    verifiedBy: raw.verified_by || raw.verifiedBy,
+    verifiedByName: raw.verified_by_name || raw.verifiedByName,
+    verifiedAt: raw.verified_at || raw.verifiedAt,
+    restoredBy: raw.restored_by || raw.restoredBy,
+    restoredByName: raw.restored_by_name || raw.restoredByName,
+    restoredAt: raw.restored_at || raw.restoredAt,
     notes: raw.notes,
-    createdAt: raw.created_at,
-    updatedAt: raw.updated_at,
+    createdAt: raw.created_at || raw.createdAt,
+    updatedAt: raw.updated_at || raw.updatedAt,
   };
 }
 
