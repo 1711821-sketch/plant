@@ -520,41 +520,129 @@ export const inspectionDocumentApi = {
     }),
 };
 
+// Helper to map backend isolation plan to frontend format
+function mapIsolationPlan(raw: any): IsolationPlan {
+  return {
+    id: raw.id,
+    diagramId: raw.diagram_id,
+    name: raw.name,
+    description: raw.description,
+    equipmentTag: raw.equipment_tag,
+    workOrder: raw.work_order,
+    status: raw.status,
+    plannedStart: raw.planned_start,
+    plannedEnd: raw.planned_end,
+    actualStart: raw.actual_start,
+    actualEnd: raw.actual_end,
+    pointSize: raw.point_size,
+    createdBy: raw.created_by,
+    createdByName: raw.created_by_name,
+    approvedBy: raw.approved_by,
+    approvedByName: raw.approved_by_name,
+    approvedAt: raw.approved_at,
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
+    pointCount: raw.point_count,
+    isolatedCount: raw.isolated_count,
+    verifiedCount: raw.verified_count,
+    diagramName: raw.diagram_name,
+    locationName: raw.location_name,
+    terminalCode: raw.terminal_code,
+    points: raw.points?.map(mapIsolationPoint),
+  };
+}
+
+// Helper to map backend isolation point to frontend format
+function mapIsolationPoint(raw: any): IsolationPoint {
+  return {
+    id: raw.id,
+    planId: raw.plan_id,
+    pointType: raw.point_type,
+    tagNumber: raw.tag_number,
+    description: raw.description,
+    sequenceNumber: raw.sequence_number,
+    normalPosition: raw.normal_position,
+    isolatedPosition: raw.isolated_position,
+    x: raw.x,
+    y: raw.y,
+    color: raw.color,
+    status: raw.status,
+    label: raw.label,
+    isolatedBy: raw.isolated_by,
+    isolatedByName: raw.isolated_by_name,
+    isolatedAt: raw.isolated_at,
+    verifiedBy: raw.verified_by,
+    verifiedByName: raw.verified_by_name,
+    verifiedAt: raw.verified_at,
+    restoredBy: raw.restored_by,
+    restoredByName: raw.restored_by_name,
+    restoredAt: raw.restored_at,
+    notes: raw.notes,
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
+  };
+}
+
 // Isolation Plan API
 export const isolationPlanApi = {
   // Get all plans for a diagram
-  getByDiagram: (diagramId: string) =>
-    request<IsolationPlan[]>(`/api/diagrams/${diagramId}/isolation-plans`),
+  getByDiagram: async (diagramId: string) => {
+    const result = await request<any[]>(`/api/diagrams/${diagramId}/isolation-plans`);
+    if (result.data) {
+      return { data: result.data.map(mapIsolationPlan) };
+    }
+    return result as { data?: IsolationPlan[]; error?: string };
+  },
 
   // Get single plan with all points
-  getOne: (planId: string) =>
-    request<IsolationPlan>(`/api/isolation-plans/${planId}`),
+  getOne: async (planId: string) => {
+    const result = await request<any>(`/api/isolation-plans/${planId}`);
+    if (result.data) {
+      return { data: mapIsolationPlan(result.data) };
+    }
+    return result as { data?: IsolationPlan; error?: string };
+  },
 
   // Get all plans (for dashboard)
-  getAll: () =>
-    request<IsolationPlan[]>('/api/isolation-plans'),
+  getAll: async () => {
+    const result = await request<any[]>('/api/isolation-plans');
+    if (result.data) {
+      return { data: result.data.map(mapIsolationPlan) };
+    }
+    return result as { data?: IsolationPlan[]; error?: string };
+  },
 
   // Get all active plans (for dashboard)
-  getActive: () =>
-    request<IsolationPlan[]>('/api/isolation-plans/active'),
+  getActive: async () => {
+    const result = await request<any[]>('/api/isolation-plans/active');
+    if (result.data) {
+      return { data: result.data.map(mapIsolationPlan) };
+    }
+    return result as { data?: IsolationPlan[]; error?: string };
+  },
 
   // Create new plan
-  create: (diagramId: string, data: {
+  create: async (diagramId: string, data: {
     name: string;
     description?: string;
     equipmentTag?: string;
     workOrder?: string;
     plannedStart?: string;
     plannedEnd?: string;
-  }) =>
-    request<IsolationPlan>(`/api/diagrams/${diagramId}/isolation-plans`, {
+  }) => {
+    const result = await request<any>(`/api/diagrams/${diagramId}/isolation-plans`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
-    }),
+    });
+    if (result.data) {
+      return { data: mapIsolationPlan(result.data) };
+    }
+    return result as { data?: IsolationPlan; error?: string };
+  },
 
   // Update plan
-  update: (planId: string, data: Partial<{
+  update: async (planId: string, data: Partial<{
     name: string;
     description: string;
     equipmentTag: string;
@@ -565,18 +653,28 @@ export const isolationPlanApi = {
     actualStart: string;
     actualEnd: string;
     pointSize: number;
-  }>) =>
-    request<IsolationPlan>(`/api/isolation-plans/${planId}`, {
+  }>) => {
+    const result = await request<any>(`/api/isolation-plans/${planId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
-    }),
+    });
+    if (result.data) {
+      return { data: mapIsolationPlan(result.data) };
+    }
+    return result as { data?: IsolationPlan; error?: string };
+  },
 
   // Approve plan (admin only)
-  approve: (planId: string) =>
-    request<IsolationPlan>(`/api/isolation-plans/${planId}/approve`, {
+  approve: async (planId: string) => {
+    const result = await request<any>(`/api/isolation-plans/${planId}/approve`, {
       method: 'POST',
-    }),
+    });
+    if (result.data) {
+      return { data: mapIsolationPlan(result.data) };
+    }
+    return result as { data?: IsolationPlan; error?: string };
+  },
 
   // Delete plan (admin only)
   delete: (planId: string) =>
@@ -588,7 +686,7 @@ export const isolationPlanApi = {
 // Isolation Point API
 export const isolationPointApi = {
   // Add point to plan
-  create: (planId: string, data: {
+  create: async (planId: string, data: {
     pointType: IsolationPointType;
     tagNumber: string;
     description?: string;
@@ -599,8 +697,8 @@ export const isolationPointApi = {
     y: number;
     color?: string;
     notes?: string;
-  }) =>
-    request<IsolationPoint>(`/api/isolation-plans/${planId}/points`, {
+  }) => {
+    const result = await request<any>(`/api/isolation-plans/${planId}/points`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -614,10 +712,15 @@ export const isolationPointApi = {
         color: data.color,
         notes: data.notes,
       }),
-    }),
+    });
+    if (result.data) {
+      return { data: mapIsolationPoint(result.data) };
+    }
+    return result as { data?: IsolationPoint; error?: string };
+  },
 
   // Update point
-  update: (pointId: string, data: Partial<{
+  update: async (pointId: string, data: Partial<{
     pointType: IsolationPointType;
     tagNumber: string;
     description: string;
@@ -642,30 +745,49 @@ export const isolationPointApi = {
     if (data.color !== undefined) payload.color = data.color;
     if (data.notes !== undefined) payload.notes = data.notes;
 
-    return request<IsolationPoint>(`/api/isolation-points/${pointId}`, {
+    const result = await request<any>(`/api/isolation-points/${pointId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    if (result.data) {
+      return { data: mapIsolationPoint(result.data) };
+    }
+    return result as { data?: IsolationPoint; error?: string };
   },
 
   // Mark point as isolated
-  isolate: (pointId: string) =>
-    request<IsolationPoint>(`/api/isolation-points/${pointId}/isolate`, {
+  isolate: async (pointId: string) => {
+    const result = await request<any>(`/api/isolation-points/${pointId}/isolate`, {
       method: 'POST',
-    }),
+    });
+    if (result.data) {
+      return { data: mapIsolationPoint(result.data) };
+    }
+    return result as { data?: IsolationPoint; error?: string };
+  },
 
   // Verify isolation
-  verify: (pointId: string) =>
-    request<IsolationPoint>(`/api/isolation-points/${pointId}/verify`, {
+  verify: async (pointId: string) => {
+    const result = await request<any>(`/api/isolation-points/${pointId}/verify`, {
       method: 'POST',
-    }),
+    });
+    if (result.data) {
+      return { data: mapIsolationPoint(result.data) };
+    }
+    return result as { data?: IsolationPoint; error?: string };
+  },
 
   // Restore point
-  restore: (pointId: string) =>
-    request<IsolationPoint>(`/api/isolation-points/${pointId}/restore`, {
+  restore: async (pointId: string) => {
+    const result = await request<any>(`/api/isolation-points/${pointId}/restore`, {
       method: 'POST',
-    }),
+    });
+    if (result.data) {
+      return { data: mapIsolationPoint(result.data) };
+    }
+    return result as { data?: IsolationPoint; error?: string };
+  },
 
   // Delete point
   delete: (pointId: string) =>
