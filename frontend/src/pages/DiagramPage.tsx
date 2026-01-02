@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { FiArrowLeft, FiShield } from 'react-icons/fi';
+import { FiArrowLeft, FiShield, FiCheck, FiX, FiRotateCcw } from 'react-icons/fi';
 import { useStore } from '../store/useStore';
 import { authApi } from '../api/client';
 import { Toolbar } from '../components/Toolbar';
@@ -8,7 +8,8 @@ import { DiagramView } from '../components/DiagramView';
 import { Sidebar } from '../components/Sidebar';
 import { IsolationPlanSidebar } from '../components/IsolationPlanSidebar';
 import type { User, IsolationPoint, IsolationPointType } from '../types';
-import { ANNOTATION_TYPE_LABELS } from '../types';
+import { ANNOTATION_TYPE_LABELS, ANNOTATION_TYPE_COLORS } from '../types';
+import type { DrawingState } from '../components/AnnotationCanvas';
 import html2canvas from 'html2canvas';
 
 export function DiagramPage() {
@@ -43,6 +44,9 @@ export function DiagramPage() {
   const [isIsolationLocked, setIsIsolationLocked] = useState(true);
   const [activeIsolationTool, setActiveIsolationTool] = useState<IsolationPointType | null>(null);
   const [isolationPointSize, setIsolationPointSize] = useState<number>(22);
+
+  // Drawing state from AnnotationCanvas
+  const [drawingState, setDrawingState] = useState<DrawingState | null>(null);
 
   // Ref for diagram capture
   const diagramContainerRef = useRef<HTMLDivElement>(null);
@@ -161,6 +165,11 @@ export function DiagramPage() {
     setIsolationPointSize(size);
   }, []);
 
+  // Drawing state callback
+  const handleDrawingStateChange = useCallback((state: DrawingState) => {
+    setDrawingState(state);
+  }, []);
+
   // Capture diagram for printing - captures the visible zoomed area
   const handleCaptureDiagram = useCallback(async (): Promise<string | null> => {
     const diagramContainer = diagramContainerRef.current;
@@ -253,7 +262,44 @@ export function DiagramPage() {
           )}
         </div>
         <div className="header-right">
-          {!isAdmin && !isSikringsplanMode && (
+          {/* Drawing controls in header */}
+          {drawingState?.hasUnsavedDrawing && !isSikringsplanMode && (
+            <div className="header-drawing-controls">
+              <span
+                className="drawing-type-badge"
+                style={{ backgroundColor: ANNOTATION_TYPE_COLORS[drawingState.annotationType] }}
+              >
+                {ANNOTATION_TYPE_LABELS[drawingState.annotationType]}
+              </span>
+              {drawingState.canUndo && (
+                <button
+                  className="btn-header-action btn-undo"
+                  onClick={drawingState.undoLastPoint}
+                  title="Fortryd punkt (Ctrl+Z)"
+                >
+                  <FiRotateCcw />
+                  <span>Fortryd</span>
+                </button>
+              )}
+              <button
+                className="btn-header-action btn-cancel"
+                onClick={drawingState.cancel}
+                title="Annuller (Esc)"
+              >
+                <FiX />
+                <span>Annuller</span>
+              </button>
+              <button
+                className="btn-header-action btn-save"
+                onClick={drawingState.save}
+                title={`Gem ${ANNOTATION_TYPE_LABELS[drawingState.annotationType]} (Enter)`}
+              >
+                <FiCheck />
+                <span>Gem</span>
+              </button>
+            </div>
+          )}
+          {!isAdmin && !isSikringsplanMode && !drawingState?.hasUnsavedDrawing && (
             <span className="view-mode-badge">Kun visning</span>
           )}
         </div>
@@ -287,6 +333,7 @@ export function DiagramPage() {
           onIsolationPointClick={handleIsolationPointClick}
           onIsolationPointCreate={handleIsolationPointCreate}
           onIsolationPointMove={handleIsolationPointMove}
+          onDrawingStateChange={handleDrawingStateChange}
         />
         {isSikringsplanMode ? (
           <IsolationPlanSidebar

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { FiZoomIn, FiZoomOut, FiMaximize } from 'react-icons/fi';
 import { PdfViewer } from './PdfViewer';
-import { AnnotationCanvas } from './AnnotationCanvas';
+import { AnnotationCanvas, type DrawingState } from './AnnotationCanvas';
 import { IsolationCanvas } from './IsolationCanvas';
 import { useStore } from '../store/useStore';
 import type { IsolationPoint, IsolationPointType } from '../types';
@@ -18,6 +18,8 @@ interface DiagramViewProps {
   onIsolationPointClick?: (point: IsolationPoint) => void;
   onIsolationPointCreate?: (x: number, y: number, type: IsolationPointType) => void;
   onIsolationPointMove?: (pointId: string, x: number, y: number) => void;
+  // Drawing state callback
+  onDrawingStateChange?: (state: DrawingState) => void;
 }
 
 export function DiagramView({
@@ -31,6 +33,7 @@ export function DiagramView({
   onIsolationPointClick,
   onIsolationPointCreate,
   onIsolationPointMove,
+  onDrawingStateChange,
 }: DiagramViewProps) {
   const { diagrams, currentDiagramId, zoom, zoomIn, zoomOut, setZoom, resetZoom, activeInspectionType, currentTool, panOffset, setPanOffset } = useStore();
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
@@ -187,6 +190,7 @@ export function DiagramView({
               diagramId={currentDiagram.id}
               annotations={filteredAnnotations}
               zoom={zoom}
+              onDrawingStateChange={onDrawingStateChange}
             />
           </div>
         )}

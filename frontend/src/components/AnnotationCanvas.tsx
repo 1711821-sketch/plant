@@ -8,6 +8,17 @@ interface AnnotationCanvasProps {
   diagramId: string;
   annotations: PipeAnnotation[];
   zoom: number;
+  onDrawingStateChange?: (state: DrawingState) => void;
+}
+
+export interface DrawingState {
+  hasUnsavedDrawing: boolean;
+  save: () => void;
+  cancel: () => void;
+  undoLastPoint: () => void;
+  canUndo: boolean;
+  currentTool: string;
+  annotationType: AnnotationType;
 }
 
 // Highlighter colors by status (semi-transparent)
@@ -33,7 +44,7 @@ const getHighlightColor = (status: string, annotationType?: AnnotationType) => {
   return HIGHLIGHT_COLORS[status as keyof typeof HIGHLIGHT_COLORS] || HIGHLIGHT_COLORS.not_inspected;
 };
 
-export function AnnotationCanvas({ width, height, diagramId, annotations, zoom }: AnnotationCanvasProps) {
+export function AnnotationCanvas({ width, height, diagramId, annotations, zoom, onDrawingStateChange }: AnnotationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
@@ -68,6 +79,12 @@ export function AnnotationCanvas({ width, height, diagramId, annotations, zoom }
 
   // Check if we have an unsaved drawing
   const hasUnsavedDrawing = currentStrokes.length > 0 || activeStroke.length > 0 || linePoints.length > 0;
+  const isDrawingToolActive = currentTool === 'draw-free' || currentTool === 'draw-line';
+
+  // Create stable callback references for the drawing state
+  const saveRef = useRef<() => void>(() => {});
+  const cancelRef = useRef<() => void>(() => {});
+  const undoRef = useRef<() => void>(() => {});
 
   // Save current drawing as annotation
   const saveCurrentDrawing = async () => {
@@ -118,6 +135,26 @@ export function AnnotationCanvas({ width, height, diagramId, annotations, zoom }
       setLinePoints(prev => prev.slice(0, -1));
     }
   };
+
+  // Update refs for stable callbacks
+  saveRef.current = saveCurrentDrawing;
+  cancelRef.current = cancelCurrentDrawing;
+  undoRef.current = undoLastPoint;
+
+  // Notify parent of drawing state changes
+  useEffect(() => {
+    if (onDrawingStateChange) {
+      onDrawingStateChange({
+        hasUnsavedDrawing: hasUnsavedDrawing && isDrawingToolActive,
+        save: () => saveRef.current(),
+        cancel: () => cancelRef.current(),
+        undoLastPoint: () => undoRef.current(),
+        canUndo: currentTool === 'draw-line' && linePoints.length > 0,
+        currentTool,
+        annotationType: selectedAnnotationType,
+      });
+    }
+  }, [hasUnsavedDrawing, isDrawingToolActive, currentTool, linePoints.length, selectedAnnotationType, onDrawingStateChange]);
 
   // Draw everything
   const draw = useCallback(() => {
@@ -449,15 +486,6 @@ export function AnnotationCanvas({ width, height, diagramId, annotations, zoom }
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [hasUnsavedDrawing, linePoints.length, isLocked]);
 
-  // Get drawing mode hint text
-  const getHintText = () => {
-    const typeName = ANNOTATION_TYPE_LABELS[selectedAnnotationType].toLowerCase();
-    if (currentTool === 'draw-line') {
-      return 'Klik for at tilføje punkter, dobbeltklik for at afslutte, Ctrl+Z for at fortryde punkt';
-    }
-    return `Tegn flere streger på samme ${typeName}, tryk Gem når færdig`;
-  };
-
   return (
     <div className="annotation-container">
       <canvas
@@ -500,37 +528,6 @@ export function AnnotationCanvas({ width, height, diagramId, annotations, zoom }
         </div>
       )}
 
-      {/* Drawing controls overlay */}
-      {!isLocked && hasUnsavedDrawing && (currentTool === 'draw-free' || currentTool === 'draw-line') && (
-        <div className="drawing-controls">
-          <button
-            className="btn-save"
-            onClick={saveCurrentDrawing}
-            title={`Gem ${ANNOTATION_TYPE_LABELS[selectedAnnotationType]} (Enter)`}
-          >
-            ✓ Gem {ANNOTATION_TYPE_LABELS[selectedAnnotationType]}
-          </button>
-          <button
-            className="btn-cancel"
-            onClick={cancelCurrentDrawing}
-            title="Annuller (Esc)"
-          >
-            ✕ Annuller
-          </button>
-          {currentTool === 'draw-line' && linePoints.length > 0 && (
-            <button
-              className="btn-undo"
-              onClick={undoLastPoint}
-              title="Fortryd punkt (Ctrl+Z)"
-            >
-              ↩ Fortryd
-            </button>
-          )}
-          <span className="drawing-hint">
-            {getHintText()}
-          </span>
-        </div>
-      )}
     </div>
   );
 }
