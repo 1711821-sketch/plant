@@ -66,7 +66,10 @@ export const useStore = create<AppState>()(
   isLocked: false,
   activeInspectionType: 'pipe',
 
-  setActiveInspectionType: (type) => set({ activeInspectionType: type }),
+  setActiveInspectionType: (type) => set({
+    activeInspectionType: type,
+    selectedAnnotationId: null, // Clear selection when switching inspection type
+  }),
 
   fetchDiagrams: async () => {
     set({ isLoading: true, error: null });

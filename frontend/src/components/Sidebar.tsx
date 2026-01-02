@@ -23,8 +23,9 @@ export function Sidebar() {
     (a) => (a.annotationType || 'pipe') === activeInspectionType
   ) || [];
 
+  // Only show selected annotation if it matches the active inspection type
   const selectedAnnotation = currentDiagram?.annotations.find(
-    (a) => a.id === selectedAnnotationId
+    (a) => a.id === selectedAnnotationId && (a.annotationType || 'pipe') === activeInspectionType
   );
 
   const [expandedSections, setExpandedSections] = useState({
