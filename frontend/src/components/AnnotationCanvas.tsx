@@ -192,8 +192,8 @@ export function AnnotationCanvas({ width, height, diagramId, annotations, zoom, 
       ctx.stroke();
       ctx.globalCompositeOperation = 'source-over';
 
-      // Draw selection border for selected annotation
-      if (annotation.id === selectedAnnotationId) {
+      // Draw selection border for selected annotation (only in select mode, not when drawing)
+      if (annotation.id === selectedAnnotationId && currentTool === 'select') {
         ctx.beginPath();
         ctx.moveTo(annotation.points[0].x, annotation.points[0].y);
         for (let i = 1; i < annotation.points.length; i++) {
@@ -298,7 +298,7 @@ export function AnnotationCanvas({ width, height, diagramId, annotations, zoom, 
       }
     }
 
-  }, [annotations, currentStrokes, activeStroke, linePoints, previewPoint, selectedAnnotationId, isLocked, width, height, selectedAnnotationType, strokeWidth]);
+  }, [annotations, currentStrokes, activeStroke, linePoints, previewPoint, selectedAnnotationId, isLocked, width, height, selectedAnnotationType, strokeWidth, currentTool]);
 
   useEffect(() => {
     draw();

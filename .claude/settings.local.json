@@ -57,7 +57,10 @@
       "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"ps aux | grep 1087713\")",
       "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"kill 1087713 && cd /var/www/plant/backend && node dist/index.js &\")",
       "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"su - admin -c ''cd /var/www/plant/backend && npm run build && pkill -f \"\"node /var/www/plant/backend/dist/index.js\"\" || true && nohup node dist/index.js > /tmp/plant-backend.log 2>&1 &''\")",
-      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"ps aux | grep ''node.*plant/backend''\")"
+      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"ps aux | grep ''node.*plant/backend''\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"cd /var/www/plant && git pull && cd frontend && npm run build\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"cd /var/www/plant && docker compose restart frontend && sleep 3 && docker compose ps\")",
+      "Bash(ssh:*)"
     ]
   }
 }
