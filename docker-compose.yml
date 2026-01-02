@@ -6,24 +6,6 @@ services:
     container_name: plant-frontend
     ports:
       - "8080:80"
-    depends_on:
-      - backend
-    networks:
-      - plant-network
-
-  backend:
-    build: ./backend
-    container_name: plant-backend
-    environment:
-      - PORT=3001
-      - NODE_ENV=production
-    volumes:
-      - ./backend/uploads:/app/uploads
-      - ./backend/data:/app/data
-    networks:
-      - plant-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
-
-networks:
-  plant-network:
-    driver: bridge

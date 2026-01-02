@@ -4,16 +4,20 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
+COPY tsconfig.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including dev for build)
+RUN npm ci
 
 # Copy source code
-COPY . .
+COPY src/ ./src/
+
+# Build TypeScript
+RUN npm run build
 
 # Create uploads directory
-RUN mkdir -p uploads
+RUN mkdir -p uploads data
 
 EXPOSE 3001
 
-CMD ["node", "src/index.js"]
+CMD ["node", "dist/index.js"]
