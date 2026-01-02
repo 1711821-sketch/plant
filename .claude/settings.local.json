@@ -43,7 +43,11 @@
       "Bash(git branch:*)",
       "Bash(git push:*)",
       "Bash(git push)",
-      "Bash(docker logs:*)"
+      "Bash(docker logs:*)",
+      "Bash(ssh root@itd1 \"cd /var/www/plant && git pull && cd frontend && npm run build && cd .. && docker compose build --no-cache frontend && docker compose up -d frontend\")",
+      "Bash(ssh root@193.181.211.144 \"cd /var/www/plant && git pull && cd frontend && npm run build && cd .. && docker compose build --no-cache frontend && docker compose up -d frontend\")",
+      "Bash(sshpass -p 'ZenNGhDbPydW' ssh -o StrictHostKeyChecking=no admin@193.181.211.144 \"echo ''SSH forbindelse OK''\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@193.181.211.144 \"echo ''SSH forbindelse OK'' && docker ps | grep plant\")"
     ]
   }
 }

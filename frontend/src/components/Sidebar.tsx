@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useStore } from '../store/useStore';
 import { STATUS_COLORS, ANNOTATION_TYPE_LABELS, ANNOTATION_TYPE_COLORS, type PipeAnnotation, type Inspection, type AnnotationType } from '../types';
-import { FiChevronDown, FiChevronRight, FiPlusCircle, FiClipboard, FiAlertCircle, FiCheckCircle, FiAlertTriangle, FiClock, FiMove, FiMinus } from 'react-icons/fi';
+import { FiChevronDown, FiChevronRight, FiPlusCircle, FiClipboard, FiAlertCircle, FiCheckCircle, FiAlertTriangle, FiClock, FiMove, FiMinus, FiX, FiMaximize2 } from 'react-icons/fi';
 import { inspectionApi } from '../api/client';
 import { InspectionForm } from './InspectionForm';
+
+const SIDEBAR_STORAGE_KEY = 'sidebar-state';
 
 export function Sidebar() {
   const {
@@ -39,12 +41,58 @@ export function Sidebar() {
   const [showInspectionForm, setShowInspectionForm] = useState(false);
   const [editingInspectionId, setEditingInspectionId] = useState<string | undefined>();
 
-  // Draggable sidebar state
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  // Draggable sidebar state - load from localStorage
+  const [isMinimized, setIsMinimized] = useState(() => {
+    try {
+      const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.isMinimized ?? false;
+      }
+    } catch { /* ignore */ }
+    return false;
+  });
+  const [isHidden, setIsHidden] = useState(() => {
+    try {
+      const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.isHidden ?? false;
+      }
+    } catch { /* ignore */ }
+    return false;
+  });
+  const [position, setPosition] = useState(() => {
+    try {
+      const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.position ?? { x: 0, y: 0 };
+      }
+    } catch { /* ignore */ }
+    return { x: 0, y: 0 };
+  });
+  const [size, setSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.size ?? { width: 380, height: 500 };
+      }
+    } catch { /* ignore */ }
+    return { width: 380, height: 500 };
+  });
   const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
+  const resizeRef = useRef<{ startX: number; startY: number; startWidth: number; startHeight: number } | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Save state to localStorage
+  useEffect(() => {
+    const state = { position, size, isMinimized, isHidden };
+    localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(state));
+  }, [position, size, isMinimized, isHidden]);
 
   // Handle drag start
   const handleDragStart = useCallback((e: React.MouseEvent) => {
@@ -91,6 +139,73 @@ export function Sidebar() {
   // Reset position
   const resetPosition = useCallback(() => {
     setPosition({ x: 0, y: 0 });
+  }, []);
+
+  // Handle resize start
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    resizeRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startWidth: size.width,
+      startHeight: size.height,
+    };
+  }, [size]);
+
+  // Handle resize move
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing || !resizeRef.current) return;
+
+      const deltaX = e.clientX - resizeRef.current.startX;
+      const deltaY = e.clientY - resizeRef.current.startY;
+
+      setSize({
+        width: Math.max(300, Math.min(600, resizeRef.current.startWidth - deltaX)),
+        height: Math.max(300, Math.min(800, resizeRef.current.startHeight + deltaY)),
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      resizeRef.current = null;
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape to close/minimize
+      if (e.key === 'Escape' && !isHidden) {
+        setIsMinimized(true);
+      }
+      // Ctrl+I to toggle sidebar
+      if (e.ctrlKey && e.key === 'i') {
+        e.preventDefault();
+        setIsHidden((prev: boolean) => !prev);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isHidden]);
+
+  // Double-click header to snap to right
+  const handleHeaderDoubleClick = useCallback(() => {
+    setPosition({ x: 0, y: 0 });
+    setSize({ width: 380, height: 500 });
   }, []);
 
   // Load inspections when annotation changes
@@ -160,31 +275,58 @@ export function Sidebar() {
     }
   };
 
+  // Show toggle button when hidden
+  if (isHidden) {
+    return (
+      <button
+        className="sidebar-show-btn"
+        onClick={() => setIsHidden(false)}
+        title="Vis inspektioner (Ctrl+I)"
+      >
+        <FiClipboard />
+        <span>Inspektioner</span>
+      </button>
+    );
+  }
+
   return (
     <aside
       ref={sidebarRef}
-      className={`sidebar sidebar-floating ${isMinimized ? 'minimized' : ''} ${isDragging ? 'dragging' : ''}`}
+      className={`sidebar sidebar-floating ${isMinimized ? 'minimized' : ''} ${isDragging ? 'dragging' : ''} ${isResizing ? 'resizing' : ''}`}
       style={{
         transform: `translate(${position.x}px, ${position.y}px)`,
+        width: isMinimized ? 'auto' : `${size.width}px`,
+        height: isMinimized ? 'auto' : `${size.height}px`,
       }}
     >
-      <div className="sidebar-drag-header" onMouseDown={handleDragStart}>
+      <div
+        className="sidebar-drag-header"
+        onMouseDown={handleDragStart}
+        onDoubleClick={handleHeaderDoubleClick}
+      >
         <div className="drag-handle">
           <FiMove />
           <h2>Inspektioner</h2>
         </div>
         <div className="sidebar-controls">
-          {position.x !== 0 || position.y !== 0 ? (
-            <button className="btn-reset" onClick={resetPosition} title="Nulstil position">
+          {(position.x !== 0 || position.y !== 0 || size.width !== 380 || size.height !== 500) && (
+            <button className="btn-reset" onClick={resetPosition} title="Nulstil position og størrelse">
               ↺
             </button>
-          ) : null}
+          )}
           <button
             className="btn-minimize"
             onClick={() => setIsMinimized(!isMinimized)}
             title={isMinimized ? 'Udvid' : 'Minimer'}
           >
-            <FiMinus />
+            {isMinimized ? <FiMaximize2 /> : <FiMinus />}
+          </button>
+          <button
+            className="btn-close"
+            onClick={() => setIsHidden(true)}
+            title="Skjul (Ctrl+I for at vise igen)"
+          >
+            <FiX />
           </button>
         </div>
       </div>
@@ -195,6 +337,7 @@ export function Sidebar() {
             {currentDiagram && <p className="diagram-name">{currentDiagram.name}</p>}
           </div>
 
+          <div className="sidebar-content">
       {/* Selected Annotation Hero Card */}
       {selectedAnnotation ? (
         <div
@@ -433,6 +576,14 @@ export function Sidebar() {
           )}
         </div>
       )}
+          </div>
+
+          {/* Resize Handle */}
+          <div
+            className="sidebar-resize-handle"
+            onMouseDown={handleResizeStart}
+            title="Træk for at ændre størrelse"
+          />
         </>
       )}
 
