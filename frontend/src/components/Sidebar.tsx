@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useStore } from '../store/useStore';
 import { STATUS_COLORS, ANNOTATION_TYPE_LABELS, ANNOTATION_TYPE_COLORS, type PipeAnnotation, type Inspection, type AnnotationType } from '../types';
-import { FiChevronDown, FiChevronRight, FiPlusCircle, FiClipboard, FiAlertCircle, FiCheckCircle, FiAlertTriangle, FiClock } from 'react-icons/fi';
+import { FiChevronDown, FiChevronRight, FiPlusCircle, FiClipboard, FiAlertCircle, FiCheckCircle, FiAlertTriangle, FiClock, FiMove, FiMinus } from 'react-icons/fi';
 import { inspectionApi } from '../api/client';
 import { InspectionForm } from './InspectionForm';
 
@@ -38,6 +38,60 @@ export function Sidebar() {
   const [loadingInspections, setLoadingInspections] = useState(false);
   const [showInspectionForm, setShowInspectionForm] = useState(false);
   const [editingInspectionId, setEditingInspectionId] = useState<string | undefined>();
+
+  // Draggable sidebar state
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Handle drag start
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startPosX: position.x,
+      startPosY: position.y,
+    };
+  }, [position]);
+
+  // Handle drag move
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging || !dragRef.current) return;
+
+      const deltaX = e.clientX - dragRef.current.startX;
+      const deltaY = e.clientY - dragRef.current.startY;
+
+      setPosition({
+        x: dragRef.current.startPosX + deltaX,
+        y: dragRef.current.startPosY + deltaY,
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      dragRef.current = null;
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  // Reset position
+  const resetPosition = useCallback(() => {
+    setPosition({ x: 0, y: 0 });
+  }, []);
 
   // Load inspections when annotation changes
   useEffect(() => {
@@ -107,11 +161,39 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-header">
-        <h2>Inspektioner</h2>
-        {currentDiagram && <p className="diagram-name">{currentDiagram.name}</p>}
+    <aside
+      ref={sidebarRef}
+      className={`sidebar sidebar-floating ${isMinimized ? 'minimized' : ''} ${isDragging ? 'dragging' : ''}`}
+      style={{
+        transform: `translate(${position.x}px, ${position.y}px)`,
+      }}
+    >
+      <div className="sidebar-drag-header" onMouseDown={handleDragStart}>
+        <div className="drag-handle">
+          <FiMove />
+          <h2>Inspektioner</h2>
+        </div>
+        <div className="sidebar-controls">
+          {position.x !== 0 || position.y !== 0 ? (
+            <button className="btn-reset" onClick={resetPosition} title="Nulstil position">
+              ↺
+            </button>
+          ) : null}
+          <button
+            className="btn-minimize"
+            onClick={() => setIsMinimized(!isMinimized)}
+            title={isMinimized ? 'Udvid' : 'Minimer'}
+          >
+            <FiMinus />
+          </button>
+        </div>
       </div>
+
+      {!isMinimized && (
+        <>
+          <div className="sidebar-header">
+            {currentDiagram && <p className="diagram-name">{currentDiagram.name}</p>}
+          </div>
 
       {/* Selected Annotation Hero Card */}
       {selectedAnnotation ? (
@@ -350,6 +432,8 @@ export function Sidebar() {
             </div>
           )}
         </div>
+      )}
+        </>
       )}
 
       {/* Inspection Form Modal */}

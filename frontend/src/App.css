@@ -1737,6 +1737,120 @@ body {
   box-shadow: -4px 0 20px rgba(0, 0, 0, 0.05);
 }
 
+/* Floating Draggable Sidebar */
+.sidebar.sidebar-floating {
+  position: fixed;
+  top: calc(var(--header-height) + var(--toolbar-height) + 20px);
+  right: 20px;
+  width: 380px;
+  max-height: calc(100vh - var(--header-height) - var(--toolbar-height) - 40px);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-xl);
+  z-index: 100;
+  transition: box-shadow var(--transition), opacity var(--transition);
+  overflow: hidden;
+}
+
+.sidebar.sidebar-floating.dragging {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  opacity: 0.95;
+  cursor: grabbing;
+}
+
+.sidebar.sidebar-floating.minimized {
+  max-height: 48px;
+  overflow: hidden;
+}
+
+/* Drag Header */
+.sidebar-drag-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  cursor: grab;
+  user-select: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-drag-header:active {
+  cursor: grabbing;
+}
+
+.drag-handle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: white;
+}
+
+.drag-handle svg {
+  width: 16px;
+  height: 16px;
+  opacity: 0.8;
+}
+
+.drag-handle h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  margin: 0;
+}
+
+.sidebar-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sidebar-controls .btn-reset,
+.sidebar-controls .btn-minimize {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.sidebar-controls .btn-reset:hover,
+.sidebar-controls .btn-minimize:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.sidebar-controls .btn-minimize svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Floating sidebar content scrollable area */
+.sidebar.sidebar-floating .sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+/* Override header style for floating sidebar */
+.sidebar.sidebar-floating .sidebar-header {
+  padding: 0.75rem 1rem;
+  background: var(--bg-light);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar.sidebar-floating .sidebar-header .diagram-name {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+
 .sidebar-header {
   padding: 1.5rem;
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
