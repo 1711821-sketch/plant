@@ -16,7 +16,8 @@ export function DiagramPage() {
   const navigate = useNavigate();
 
   // Check if we're in sikringsplan mode
-  const isSikringsplanMode = searchParams.get('opretSikringsplan') === 'true';
+  const isSikringsplanMode = searchParams.get('opretSikringsplan') === 'true' || searchParams.get('sikringsplan') === 'true';
+  const initialPlanId = searchParams.get('planId');
 
   const [user, setUser] = useState<User | null>(null);
   const {
@@ -209,6 +210,7 @@ export function DiagramPage() {
           <IsolationPlanSidebar
             diagramId={currentDiagram.id}
             isAdmin={isAdmin}
+            initialPlanId={initialPlanId}
             onPointSelected={handleIsolationPointSelected}
             onToolChange={handleIsolationToolChange}
             onLockChange={handleIsolationLockChange}

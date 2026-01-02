@@ -21,7 +21,8 @@ import {
   FiWind,
   FiTool,
   FiActivity,
-  FiStar
+  FiStar,
+  FiPrinter
 } from 'react-icons/fi';
 import { isolationPlanApi, isolationPointApi } from '../api/client';
 import type {
@@ -43,6 +44,7 @@ import {
 interface IsolationPlanSidebarProps {
   diagramId: string;
   isAdmin: boolean;
+  initialPlanId?: string | null;
   onPointSelected?: (point: IsolationPoint | null) => void;
   onToolChange?: (tool: IsolationPointType | null) => void;
   onLockChange?: (isLocked: boolean) => void;
@@ -66,6 +68,7 @@ const TOOLS: { type: IsolationPointType; icon: React.ReactNode; label: string; c
 export function IsolationPlanSidebar({
   diagramId,
   isAdmin,
+  initialPlanId,
   onPointSelected,
   onToolChange,
   onLockChange,
@@ -140,10 +143,13 @@ export function IsolationPlanSidebar({
     const { data, error } = await isolationPlanApi.getByDiagram(diagramId);
     if (!error && data) {
       setPlans(data);
-      // Select first plan if available
+      // Select initial plan if provided, otherwise first plan
       if (data.length > 0 && !selectedPlanId) {
-        setSelectedPlanId(data[0].id);
-        loadPlanDetails(data[0].id);
+        const planToSelect = initialPlanId && data.some(p => p.id === initialPlanId)
+          ? initialPlanId
+          : data[0].id;
+        setSelectedPlanId(planToSelect);
+        loadPlanDetails(planToSelect);
       }
     }
     setLoading(false);
@@ -317,6 +323,327 @@ export function IsolationPlanSidebar({
     if (!error && data) {
       await loadPlanDetails(planId);
     }
+  };
+
+  const handlePrintPlan = () => {
+    if (!selectedPlan) return;
+
+    const points = selectedPlan.points || [];
+    const sortedPoints = [...points].sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Kunne ikke aabne print-vindue. Tillad pop-ups for denne side.');
+      return;
+    }
+
+    const formatDate = (dateStr?: string) => {
+      if (!dateStr) return '-';
+      return new Date(dateStr).toLocaleDateString('da-DK');
+    };
+
+    const formatDateTime = (dateStr?: string) => {
+      if (!dateStr) return '-';
+      return new Date(dateStr).toLocaleString('da-DK');
+    };
+
+    const getPointTypeLabel = (type: IsolationPointType) => {
+      return ISOLATION_POINT_TYPE_LABELS[type] || type;
+    };
+
+    const getStatusLabel = (status: IsolationPointStatus) => {
+      return ISOLATION_POINT_STATUS_LABELS[status] || status;
+    };
+
+    const html = `
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <title>Sikringsplan - ${selectedPlan.name}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 11pt;
+      margin: 0;
+      padding: 20px;
+      color: #000;
+    }
+    .header {
+      border-bottom: 3px solid #1e40af;
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      margin: 0 0 5px 0;
+      font-size: 24pt;
+      color: #1e40af;
+    }
+    .header .subtitle {
+      font-size: 14pt;
+      color: #6b7280;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-weight: bold;
+      color: white;
+      background: ${ISOLATION_PLAN_STATUS_COLORS[selectedPlan.status]};
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 30px;
+      margin-bottom: 25px;
+      padding: 15px;
+      background: #f9fafb;
+      border-radius: 8px;
+    }
+    .info-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .info-label {
+      font-size: 9pt;
+      color: #6b7280;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .info-value {
+      font-weight: 500;
+    }
+    .section-title {
+      font-size: 14pt;
+      color: #1e40af;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 8px;
+      margin: 25px 0 15px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    th, td {
+      border: 1px solid #d1d5db;
+      padding: 8px 10px;
+      text-align: left;
+    }
+    th {
+      background: #1e40af;
+      color: white;
+      font-weight: 600;
+      font-size: 10pt;
+    }
+    tr:nth-child(even) {
+      background: #f9fafb;
+    }
+    .seq-num {
+      font-weight: bold;
+      text-align: center;
+      width: 40px;
+    }
+    .status-cell {
+      text-align: center;
+      font-weight: 500;
+    }
+    .status-pending { color: #6b7280; }
+    .status-isolated { color: #f59e0b; }
+    .status-verified { color: #22c55e; }
+    .status-restored { color: #3b82f6; }
+    .signature-section {
+      margin-top: 40px;
+      page-break-inside: avoid;
+    }
+    .signature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+    .signature-box {
+      border: 1px solid #d1d5db;
+      padding: 15px;
+      min-height: 100px;
+    }
+    .signature-label {
+      font-size: 9pt;
+      color: #6b7280;
+      margin-bottom: 50px;
+    }
+    .signature-line {
+      border-top: 1px solid #000;
+      padding-top: 5px;
+      font-size: 10pt;
+    }
+    .footer {
+      margin-top: 30px;
+      padding-top: 15px;
+      border-top: 1px solid #e5e7eb;
+      font-size: 9pt;
+      color: #6b7280;
+      text-align: center;
+    }
+    .point-history {
+      font-size: 9pt;
+      color: #6b7280;
+    }
+    @media print {
+      body { padding: 10mm; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>SIKRINGSPLAN - LOTO</h1>
+    <div class="subtitle">${selectedPlan.name}</div>
+    <div style="margin-top: 10px;">
+      <span class="status-badge">${ISOLATION_PLAN_STATUS_LABELS[selectedPlan.status]}</span>
+    </div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-item">
+      <span class="info-label">Equipment Tag</span>
+      <span class="info-value">${selectedPlan.equipmentTag || '-'}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Work Order</span>
+      <span class="info-value">${selectedPlan.workOrder || '-'}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Planlagt Start</span>
+      <span class="info-value">${formatDate(selectedPlan.plannedStart)}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Planlagt Slut</span>
+      <span class="info-value">${formatDate(selectedPlan.plannedEnd)}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Faktisk Start</span>
+      <span class="info-value">${formatDate(selectedPlan.actualStart)}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Faktisk Slut</span>
+      <span class="info-value">${formatDate(selectedPlan.actualEnd)}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Oprettet Af</span>
+      <span class="info-value">${selectedPlan.createdByName || '-'}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Godkendt Af</span>
+      <span class="info-value">${selectedPlan.approvedByName || '-'}</span>
+    </div>
+  </div>
+
+  ${selectedPlan.description ? `
+  <div class="info-item" style="margin-bottom: 20px;">
+    <span class="info-label">Beskrivelse</span>
+    <span class="info-value">${selectedPlan.description}</span>
+  </div>
+  ` : ''}
+
+  <h2 class="section-title">Isoleringspunkter (${points.length})</h2>
+
+  ${points.length > 0 ? `
+  <table>
+    <thead>
+      <tr>
+        <th class="seq-num">Nr.</th>
+        <th>Tag</th>
+        <th>Type</th>
+        <th>Beskrivelse</th>
+        <th>Normal Position</th>
+        <th>Isoleret Position</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${sortedPoints.map(point => `
+        <tr>
+          <td class="seq-num">${point.sequenceNumber}</td>
+          <td><strong>${point.tagNumber}</strong></td>
+          <td>${getPointTypeLabel(point.pointType)}</td>
+          <td>${point.description || '-'}</td>
+          <td>${point.normalPosition || '-'}</td>
+          <td>${point.isolatedPosition || '-'}</td>
+          <td class="status-cell status-${point.status}">${getStatusLabel(point.status)}</td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+  ` : '<p>Ingen isoleringspunkter defineret.</p>'}
+
+  ${selectedPlan.status === 'active' || selectedPlan.status === 'completed' ? `
+  <h2 class="section-title">Isoleringshistorik</h2>
+  <table>
+    <thead>
+      <tr>
+        <th class="seq-num">Nr.</th>
+        <th>Tag</th>
+        <th>Isoleret Af</th>
+        <th>Isoleret Tid</th>
+        <th>Verificeret Af</th>
+        <th>Verificeret Tid</th>
+        <th>Genetableret Af</th>
+        <th>Genetableret Tid</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${sortedPoints.map(point => `
+        <tr>
+          <td class="seq-num">${point.sequenceNumber}</td>
+          <td><strong>${point.tagNumber}</strong></td>
+          <td>${point.isolatedByName || '-'}</td>
+          <td>${formatDateTime(point.isolatedAt)}</td>
+          <td>${point.verifiedByName || '-'}</td>
+          <td>${formatDateTime(point.verifiedAt)}</td>
+          <td>${point.restoredByName || '-'}</td>
+          <td>${formatDateTime(point.restoredAt)}</td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+  ` : ''}
+
+  <div class="signature-section">
+    <h2 class="section-title">Underskrifter</h2>
+    <div class="signature-grid">
+      <div class="signature-box">
+        <div class="signature-label">Ansvarlig for isolering</div>
+        <div class="signature-line">Navn / Dato</div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-label">Verificeret af</div>
+        <div class="signature-line">Navn / Dato</div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-label">Genetablering godkendt af</div>
+        <div class="signature-line">Navn / Dato</div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-label">Arbejdsleder</div>
+        <div class="signature-line">Navn / Dato</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Udskrevet: ${new Date().toLocaleString('da-DK')} | AnlaegsPortalen - LOTO System
+  </div>
+
+  <script>
+    window.onload = function() { window.print(); }
+  </script>
+</body>
+</html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
   };
 
   const handleSendToApproval = async (planId: string) => {
@@ -615,6 +942,15 @@ export function IsolationPlanSidebar({
                   <FiCheckCircle />
                 </button>
               )}
+
+              {/* Print button - always visible when plan is selected */}
+              <button
+                className="btn-icon-small"
+                onClick={handlePrintPlan}
+                title="Udskriv sikringsplan"
+              >
+                <FiPrinter />
+              </button>
 
               {isAdmin && selectedPlan.status === 'draft' && (
                 <button

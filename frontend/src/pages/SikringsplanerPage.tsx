@@ -293,7 +293,7 @@ export function SikringsplanerPage() {
               <div
                 key={plan.id}
                 className="sikringsplan-card"
-                onClick={() => navigate(`/diagram/${plan.diagramId}`)}
+                onClick={() => navigate(`/diagram/${plan.diagramId}?sikringsplan=true&planId=${plan.id}`)}
               >
                 <div className="plan-card-main">
                   <div
