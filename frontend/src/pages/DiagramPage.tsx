@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FiArrowLeft, FiShield } from 'react-icons/fi';
 import { useStore } from '../store/useStore';
@@ -9,6 +9,7 @@ import { Sidebar } from '../components/Sidebar';
 import { IsolationPlanSidebar } from '../components/IsolationPlanSidebar';
 import type { User, IsolationPoint, IsolationPointType } from '../types';
 import { ANNOTATION_TYPE_LABELS } from '../types';
+import html2canvas from 'html2canvas';
 
 export function DiagramPage() {
   const { diagramId } = useParams<{ diagramId: string }>();
@@ -40,6 +41,9 @@ export function DiagramPage() {
   const [isIsolationLocked, setIsIsolationLocked] = useState(true);
   const [activeIsolationTool, setActiveIsolationTool] = useState<IsolationPointType | null>(null);
   const [isolationPointSize, setIsolationPointSize] = useState<number>(22);
+
+  // Ref for diagram capture
+  const diagramContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadUser();
@@ -125,6 +129,38 @@ export function DiagramPage() {
     setIsolationPointSize(size);
   }, []);
 
+  // Capture diagram for printing - captures the visible zoomed area
+  const handleCaptureDiagram = useCallback(async (): Promise<string | null> => {
+    const diagramContainer = diagramContainerRef.current;
+    if (!diagramContainer) {
+      console.error('Diagram container ref not found');
+      return null;
+    }
+
+    try {
+      // Find the diagram-view element which contains the zoomed content
+      const diagramView = diagramContainer.querySelector('.diagram-view');
+      if (!diagramView) {
+        console.error('Diagram view not found');
+        return null;
+      }
+
+      // Use html2canvas to capture the visible area
+      const canvas = await html2canvas(diagramView as HTMLElement, {
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        scale: 2, // Higher quality
+        logging: false,
+      });
+
+      return canvas.toDataURL('image/png');
+    } catch (error) {
+      console.error('Error capturing diagram:', error);
+      return null;
+    }
+  }, []);
+
   // Debug: Log current state
   console.log('DiagramPage render:', {
     isIsolationLocked,
@@ -193,7 +229,7 @@ export function DiagramPage() {
 
       {isAdmin && !isSikringsplanMode && <Toolbar onUploadPdf={handleUploadPdf} />}
 
-      <div className="diagram-workspace">
+      <div className="diagram-workspace" ref={diagramContainerRef}>
         <DiagramView
           hideAnnotations={isSikringsplanMode}
           isolationMode={isSikringsplanMode}
@@ -216,6 +252,7 @@ export function DiagramPage() {
             onLockChange={handleIsolationLockChange}
             onPointsChange={handleIsolationPointsChange}
             onPointSizeChange={handleIsolationPointSizeChange}
+            onCaptureDiagram={handleCaptureDiagram}
           />
         ) : (
           <Sidebar />

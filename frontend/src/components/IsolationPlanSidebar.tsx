@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   FiChevronDown,
   FiChevronRight,
@@ -22,7 +22,10 @@ import {
   FiTool,
   FiActivity,
   FiStar,
-  FiPrinter
+  FiPrinter,
+  FiMove,
+  FiMinus,
+  FiMaximize2
 } from 'react-icons/fi';
 import { isolationPlanApi, isolationPointApi } from '../api/client';
 import type {
@@ -50,7 +53,10 @@ interface IsolationPlanSidebarProps {
   onLockChange?: (isLocked: boolean) => void;
   onPointsChange?: (points: IsolationPoint[]) => void;
   onPointSizeChange?: (size: number) => void;
+  onCaptureDiagram?: () => Promise<string | null>;
 }
+
+const ISOLATION_SIDEBAR_STORAGE_KEY = 'isolation-sidebar-state';
 
 // Tool definitions with icons
 const TOOLS: { type: IsolationPointType; icon: React.ReactNode; label: string; color: string }[] = [
@@ -74,6 +80,7 @@ export function IsolationPlanSidebar({
   onLockChange,
   onPointsChange,
   onPointSizeChange,
+  onCaptureDiagram,
 }: IsolationPlanSidebarProps) {
   const [plans, setPlans] = useState<IsolationPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
@@ -109,6 +116,174 @@ export function IsolationPlanSidebar({
   // Tool and lock state
   const [activeTool, setActiveTool] = useState<IsolationPointType | null>(null);
   const [isLocked, setIsLocked] = useState(true);
+
+  // Draggable sidebar state - load from localStorage
+  const [isMinimized, setIsMinimized] = useState(() => {
+    try {
+      const saved = localStorage.getItem(ISOLATION_SIDEBAR_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.isMinimized ?? false;
+      }
+    } catch { /* ignore */ }
+    return false;
+  });
+  const [isHidden, setIsHidden] = useState(() => {
+    try {
+      const saved = localStorage.getItem(ISOLATION_SIDEBAR_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.isHidden ?? false;
+      }
+    } catch { /* ignore */ }
+    return false;
+  });
+  const [position, setPosition] = useState(() => {
+    try {
+      const saved = localStorage.getItem(ISOLATION_SIDEBAR_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.position ?? { x: 0, y: 0 };
+      }
+    } catch { /* ignore */ }
+    return { x: 0, y: 0 };
+  });
+  const [size, setSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem(ISOLATION_SIDEBAR_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.size ?? { width: 380, height: 600 };
+      }
+    } catch { /* ignore */ }
+    return { width: 380, height: 600 };
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
+  const resizeRef = useRef<{ startX: number; startY: number; startWidth: number; startHeight: number } | null>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Save state to localStorage
+  useEffect(() => {
+    const state = { position, size, isMinimized, isHidden };
+    localStorage.setItem(ISOLATION_SIDEBAR_STORAGE_KEY, JSON.stringify(state));
+  }, [position, size, isMinimized, isHidden]);
+
+  // Handle drag start
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startPosX: position.x,
+      startPosY: position.y,
+    };
+  }, [position]);
+
+  // Handle drag move
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging || !dragRef.current) return;
+
+      const deltaX = e.clientX - dragRef.current.startX;
+      const deltaY = e.clientY - dragRef.current.startY;
+
+      setPosition({
+        x: dragRef.current.startPosX + deltaX,
+        y: dragRef.current.startPosY + deltaY,
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      dragRef.current = null;
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  // Reset position
+  const resetPosition = useCallback(() => {
+    setPosition({ x: 0, y: 0 });
+    setSize({ width: 380, height: 600 });
+  }, []);
+
+  // Handle resize start
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    resizeRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startWidth: size.width,
+      startHeight: size.height,
+    };
+  }, [size]);
+
+  // Handle resize move
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing || !resizeRef.current) return;
+
+      const deltaX = e.clientX - resizeRef.current.startX;
+      const deltaY = e.clientY - resizeRef.current.startY;
+
+      setSize({
+        width: Math.max(300, Math.min(600, resizeRef.current.startWidth - deltaX)),
+        height: Math.max(300, Math.min(900, resizeRef.current.startHeight + deltaY)),
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      resizeRef.current = null;
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape to minimize
+      if (e.key === 'Escape' && !isHidden) {
+        setIsMinimized(true);
+      }
+      // Ctrl+Shift+S to toggle sidebar
+      if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+        e.preventDefault();
+        setIsHidden((prev: boolean) => !prev);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isHidden]);
+
+  // Double-click header to snap to right
+  const handleHeaderDoubleClick = useCallback(() => {
+    setPosition({ x: 0, y: 0 });
+    setSize({ width: 380, height: 600 });
+  }, []);
 
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
   const selectedPoint = selectedPlan?.points?.find(p => p.id === selectedPointId);
@@ -332,11 +507,21 @@ export function IsolationPlanSidebar({
     }
   };
 
-  const handlePrintPlan = () => {
+  const handlePrintPlan = async () => {
     if (!selectedPlan) return;
 
     const points = selectedPlan.points || [];
     const sortedPoints = [...points].sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+
+    // Capture diagram screenshot if available
+    let diagramImageData: string | null = null;
+    if (onCaptureDiagram) {
+      try {
+        diagramImageData = await onCaptureDiagram();
+      } catch (err) {
+        console.error('Failed to capture diagram:', err);
+      }
+    }
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -361,6 +546,14 @@ export function IsolationPlanSidebar({
     const getStatusLabel = (status: IsolationPointStatus) => {
       return ISOLATION_POINT_STATUS_LABELS[status] || status;
     };
+
+    // Generate legend HTML for all isolation point types
+    const legendHtml = TOOLS.map(tool => `
+      <div class="legend-item">
+        <span class="legend-color" style="background: ${tool.color};"></span>
+        <span class="legend-label">${tool.label}</span>
+      </div>
+    `).join('');
 
     const html = `
 <!DOCTYPE html>
@@ -496,9 +689,44 @@ export function IsolationPlanSidebar({
       font-size: 9pt;
       color: #6b7280;
     }
+    .diagram-section {
+      margin: 25px 0;
+      page-break-inside: avoid;
+    }
+    .diagram-image {
+      max-width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+    }
+    .legend-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #f9fafb;
+      border-radius: 8px;
+    }
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      border: 2px solid rgba(0,0,0,0.2);
+    }
+    .legend-label {
+      font-size: 10pt;
+    }
     @media print {
       body { padding: 10mm; }
       .no-print { display: none; }
+      .diagram-section { page-break-before: always; }
     }
   </style>
 </head>
@@ -550,6 +778,22 @@ export function IsolationPlanSidebar({
   <div class="info-item" style="margin-bottom: 20px;">
     <span class="info-label">Beskrivelse</span>
     <span class="info-value">${selectedPlan.description}</span>
+  </div>
+  ` : ''}
+
+  <!-- Legend Section -->
+  <div class="legend-section">
+    <h3 style="margin: 0 0 10px 0; font-size: 12pt; color: #1e40af;">Signaturforklaring - Isoleringstyper</h3>
+    <div class="legend-grid">
+      ${legendHtml}
+    </div>
+  </div>
+
+  <!-- Diagram Section -->
+  ${diagramImageData ? `
+  <div class="diagram-section">
+    <h2 class="section-title">Tegning med isoleringspunkter</h2>
+    <img src="${diagramImageData}" alt="Diagram" class="diagram-image" />
   </div>
   ` : ''}
 
@@ -759,84 +1003,137 @@ export function IsolationPlanSidebar({
     handlePointMove,
   };
 
+  // Show toggle button when hidden
+  if (isHidden) {
+    return (
+      <button
+        className="sidebar-show-btn isolation-show-btn"
+        onClick={() => setIsHidden(false)}
+        title="Vis sikringsplan (Ctrl+Shift+S)"
+      >
+        <FiShield />
+        <span>Sikringsplan</span>
+      </button>
+    );
+  }
+
   return (
-    <aside className="sidebar isolation-sidebar">
-      <div className="sidebar-header">
-        <h2>
-          <FiShield style={{ marginRight: '0.5rem' }} />
-          Sikringsplan
-        </h2>
-        {selectedPlan && (
+    <aside
+      ref={sidebarRef}
+      className={`sidebar sidebar-floating isolation-sidebar ${isMinimized ? 'minimized' : ''} ${isDragging ? 'dragging' : ''} ${isResizing ? 'resizing' : ''}`}
+      style={{
+        transform: `translate(${position.x}px, ${position.y}px)`,
+        width: isMinimized ? 'auto' : `${size.width}px`,
+        height: isMinimized ? 'auto' : `${size.height}px`,
+      }}
+    >
+      <div
+        className="sidebar-drag-header"
+        onMouseDown={handleDragStart}
+        onDoubleClick={handleHeaderDoubleClick}
+      >
+        <div className="drag-handle">
+          <FiMove />
+          <h2>
+            <FiShield style={{ marginRight: '0.5rem' }} />
+            Sikringsplan
+          </h2>
+        </div>
+        <div className="sidebar-controls">
+          {selectedPlan && (
+            <button
+              className={`lock-toggle ${isLocked ? 'locked' : 'unlocked'}`}
+              onClick={handleToggleLock}
+              disabled={!canEdit}
+              title={isLocked ? 'Laas op for redigering' : 'Laas tegning'}
+            >
+              {isLocked ? <FiLock /> : <FiUnlock />}
+            </button>
+          )}
+          {(position.x !== 0 || position.y !== 0 || size.width !== 380 || size.height !== 600) && (
+            <button className="btn-reset" onClick={resetPosition} title="Nulstil position og størrelse">
+              ↺
+            </button>
+          )}
           <button
-            className={`lock-toggle ${isLocked ? 'locked' : 'unlocked'}`}
-            onClick={handleToggleLock}
-            disabled={!canEdit}
-            title={isLocked ? 'Laas op for redigering' : 'Laas tegning'}
+            className="btn-minimize"
+            onClick={() => setIsMinimized(!isMinimized)}
+            title={isMinimized ? 'Udvid' : 'Minimer'}
           >
-            {isLocked ? <FiLock /> : <FiUnlock />}
+            {isMinimized ? <FiMaximize2 /> : <FiMinus />}
           </button>
-        )}
+          <button
+            className="btn-close"
+            onClick={() => setIsHidden(true)}
+            title="Skjul (Ctrl+Shift+S for at vise igen)"
+          >
+            <FiX />
+          </button>
+        </div>
       </div>
 
-      {/* Tools Section */}
-      {selectedPlan && canEdit && (
-        <div className="sidebar-section tools-section">
-          <button className="section-header" onClick={() => toggleSection('tools')}>
-            {expandedSections.tools ? <FiChevronDown /> : <FiChevronRight />}
-            <FiTool style={{ marginLeft: '0.25rem' }} />
-            <span>Vaerktojer</span>
-          </button>
-
-          {expandedSections.tools && (
-            <div className="tools-grid">
-              {TOOLS.map((tool) => (
-                <button
-                  key={tool.type}
-                  className={`tool-button ${activeTool === tool.type ? 'active' : ''} ${isLocked ? 'disabled' : ''}`}
-                  onClick={() => handleToolSelect(tool.type)}
-                  disabled={isLocked}
-                  title={tool.label}
-                  style={{
-                    '--tool-color': tool.color,
-                  } as React.CSSProperties}
-                >
-                  {tool.icon}
-                  <span className="tool-label">{tool.label}</span>
+      {!isMinimized && (
+        <>
+          <div className="sidebar-content">
+            {/* Tools Section */}
+            {selectedPlan && canEdit && (
+              <div className="sidebar-section tools-section">
+                <button className="section-header" onClick={() => toggleSection('tools')}>
+                  {expandedSections.tools ? <FiChevronDown /> : <FiChevronRight />}
+                  <FiTool style={{ marginLeft: '0.25rem' }} />
+                  <span>Vaerktojer</span>
                 </button>
-              ))}
-            </div>
-          )}
 
-          {!isLocked && activeTool && (
-            <div className="tool-hint">
-              Klik paa tegningen for at placere {ISOLATION_POINT_TYPE_LABELS[activeTool].toLowerCase()}
-            </div>
-          )}
+                {expandedSections.tools && (
+                  <div className="tools-grid">
+                    {TOOLS.map((tool) => (
+                      <button
+                        key={tool.type}
+                        className={`tool-button ${activeTool === tool.type ? 'active' : ''} ${isLocked ? 'disabled' : ''}`}
+                        onClick={() => handleToolSelect(tool.type)}
+                        disabled={isLocked}
+                        title={tool.label}
+                        style={{
+                          '--tool-color': tool.color,
+                        } as React.CSSProperties}
+                      >
+                        {tool.icon}
+                        <span className="tool-label">{tool.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
 
-          {/* Point Size Slider */}
-          {selectedPlan && (
-            <div className="point-size-control" style={{ marginTop: '1rem', padding: '0.75rem', background: '#f9fafb', borderRadius: '6px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
-                <span>Punktstørrelse</span>
-                <span style={{ color: '#6b7280' }}>{selectedPlan.pointSize || 22}px</span>
-              </label>
-              <input
-                type="range"
-                min="12"
-                max="40"
-                value={selectedPlan.pointSize || 22}
-                onChange={(e) => handlePointSizeChange(parseInt(e.target.value))}
-                disabled={isLocked}
-                style={{ width: '100%' }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
-                <span>Lille (12)</span>
-                <span>Stor (40)</span>
+                {!isLocked && activeTool && (
+                  <div className="tool-hint">
+                    Klik paa tegningen for at placere {ISOLATION_POINT_TYPE_LABELS[activeTool].toLowerCase()}
+                  </div>
+                )}
+
+                {/* Point Size Slider */}
+                {selectedPlan && (
+                  <div className="point-size-control" style={{ marginTop: '1rem', padding: '0.75rem', background: '#f9fafb', borderRadius: '6px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
+                      <span>Punktstørrelse</span>
+                      <span style={{ color: '#6b7280' }}>{selectedPlan.pointSize || 22}px</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="12"
+                      max="40"
+                      value={selectedPlan.pointSize || 22}
+                      onChange={(e) => handlePointSizeChange(parseInt(e.target.value))}
+                      disabled={isLocked}
+                      style={{ width: '100%' }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+                      <span>Lille (12)</span>
+                      <span>Stor (40)</span>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
 
       {/* Plans List */}
       <div className="sidebar-section">
@@ -1166,170 +1463,180 @@ export function IsolationPlanSidebar({
         </>
       )}
 
-      {/* Create Plan Modal */}
-      {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal isolation-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>
-              <FiShield />
-              Opret sikringsplan
-            </h2>
-            <form onSubmit={handleCreatePlan}>
-              <div className="form-group">
-                <label>Navn *</label>
-                <input
-                  type="text"
-                  value={newPlan.name}
-                  onChange={(e) => setNewPlan({ ...newPlan, name: e.target.value })}
-                  placeholder="F.eks. Tank T-101 inspektion"
-                  required
-                  autoFocus
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Beskrivelse</label>
-                <textarea
-                  value={newPlan.description}
-                  onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
-                  placeholder="Beskrivelse af arbejdet..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Udstyrs-tag</label>
-                  <input
-                    type="text"
-                    value={newPlan.equipmentTag}
-                    onChange={(e) => setNewPlan({ ...newPlan, equipmentTag: e.target.value })}
-                    placeholder="F.eks. T-101"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Arbejdsordre</label>
-                  <input
-                    type="text"
-                    value={newPlan.workOrder}
-                    onChange={(e) => setNewPlan({ ...newPlan, workOrder: e.target.value })}
-                    placeholder="F.eks. WO-2024-001"
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Planlagt start</label>
-                  <input
-                    type="date"
-                    value={newPlan.plannedStart}
-                    onChange={(e) => setNewPlan({ ...newPlan, plannedStart: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Planlagt slut</label>
-                  <input
-                    type="date"
-                    value={newPlan.plannedEnd}
-                    onChange={(e) => setNewPlan({ ...newPlan, plannedEnd: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowCreateModal(false)}>
-                  Annuller
-                </button>
-                <button type="submit" className="btn-primary">
+          {/* Create Plan Modal */}
+          {showCreateModal && (
+            <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+              <div className="modal isolation-modal" onClick={(e) => e.stopPropagation()}>
+                <h2>
                   <FiShield />
-                  Opret plan
-                </button>
+                  Opret sikringsplan
+                </h2>
+                <form onSubmit={handleCreatePlan}>
+                  <div className="form-group">
+                    <label>Navn *</label>
+                    <input
+                      type="text"
+                      value={newPlan.name}
+                      onChange={(e) => setNewPlan({ ...newPlan, name: e.target.value })}
+                      placeholder="F.eks. Tank T-101 inspektion"
+                      required
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Beskrivelse</label>
+                    <textarea
+                      value={newPlan.description}
+                      onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
+                      placeholder="Beskrivelse af arbejdet..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Udstyrs-tag</label>
+                      <input
+                        type="text"
+                        value={newPlan.equipmentTag}
+                        onChange={(e) => setNewPlan({ ...newPlan, equipmentTag: e.target.value })}
+                        placeholder="F.eks. T-101"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Arbejdsordre</label>
+                      <input
+                        type="text"
+                        value={newPlan.workOrder}
+                        onChange={(e) => setNewPlan({ ...newPlan, workOrder: e.target.value })}
+                        placeholder="F.eks. WO-2024-001"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Planlagt start</label>
+                      <input
+                        type="date"
+                        value={newPlan.plannedStart}
+                        onChange={(e) => setNewPlan({ ...newPlan, plannedStart: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Planlagt slut</label>
+                      <input
+                        type="date"
+                        value={newPlan.plannedEnd}
+                        onChange={(e) => setNewPlan({ ...newPlan, plannedEnd: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="modal-actions">
+                    <button type="button" className="btn-secondary" onClick={() => setShowCreateModal(false)}>
+                      Annuller
+                    </button>
+                    <button type="submit" className="btn-primary">
+                      <FiShield />
+                      Opret plan
+                    </button>
+                  </div>
+                </form>
               </div>
-            </form>
+            </div>
+          )}
+
+          {/* Create Point Modal */}
+          {showPointModal && (
+            <div className="modal-overlay" onClick={() => setShowPointModal(false)}>
+              <div className="modal isolation-modal" onClick={(e) => e.stopPropagation()}>
+                <h2>
+                  <span style={{ color: ISOLATION_POINT_TYPE_COLORS[newPoint.pointType] }}>
+                    {TOOLS.find(t => t.type === newPoint.pointType)?.icon}
+                  </span>
+                  Tilfoej {ISOLATION_POINT_TYPE_LABELS[newPoint.pointType]}
+                </h2>
+                <form onSubmit={handleCreatePoint}>
+                  <div className="form-group">
+                    <label>Tag nummer *</label>
+                    <input
+                      type="text"
+                      value={newPoint.tagNumber}
+                      onChange={(e) => setNewPoint({ ...newPoint, tagNumber: e.target.value })}
+                      placeholder="F.eks. XV-101"
+                      required
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Beskrivelse</label>
+                    <input
+                      type="text"
+                      value={newPoint.description}
+                      onChange={(e) => setNewPoint({ ...newPoint, description: e.target.value })}
+                      placeholder="F.eks. Afspaerringsventil til tank"
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Normal position</label>
+                      <input
+                        type="text"
+                        value={newPoint.normalPosition}
+                        onChange={(e) => setNewPoint({ ...newPoint, normalPosition: e.target.value })}
+                        placeholder="F.eks. Aaben"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Isoleret position</label>
+                      <input
+                        type="text"
+                        value={newPoint.isolatedPosition}
+                        onChange={(e) => setNewPoint({ ...newPoint, isolatedPosition: e.target.value })}
+                        placeholder="F.eks. Lukket + laast"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Noter</label>
+                    <textarea
+                      value={newPoint.notes}
+                      onChange={(e) => setNewPoint({ ...newPoint, notes: e.target.value })}
+                      placeholder="Eventuelle noter..."
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="modal-actions">
+                    <button type="button" className="btn-secondary" onClick={() => setShowPointModal(false)}>
+                      Annuller
+                    </button>
+                    <button type="submit" className="btn-primary">
+                      <FiPlusCircle />
+                      Tilfoej punkt
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
           </div>
-        </div>
-      )}
 
-      {/* Create Point Modal */}
-      {showPointModal && (
-        <div className="modal-overlay" onClick={() => setShowPointModal(false)}>
-          <div className="modal isolation-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>
-              <span style={{ color: ISOLATION_POINT_TYPE_COLORS[newPoint.pointType] }}>
-                {TOOLS.find(t => t.type === newPoint.pointType)?.icon}
-              </span>
-              Tilfoej {ISOLATION_POINT_TYPE_LABELS[newPoint.pointType]}
-            </h2>
-            <form onSubmit={handleCreatePoint}>
-              <div className="form-group">
-                <label>Tag nummer *</label>
-                <input
-                  type="text"
-                  value={newPoint.tagNumber}
-                  onChange={(e) => setNewPoint({ ...newPoint, tagNumber: e.target.value })}
-                  placeholder="F.eks. XV-101"
-                  required
-                  autoFocus
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Beskrivelse</label>
-                <input
-                  type="text"
-                  value={newPoint.description}
-                  onChange={(e) => setNewPoint({ ...newPoint, description: e.target.value })}
-                  placeholder="F.eks. Afspaerringsventil til tank"
-                />
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Normal position</label>
-                  <input
-                    type="text"
-                    value={newPoint.normalPosition}
-                    onChange={(e) => setNewPoint({ ...newPoint, normalPosition: e.target.value })}
-                    placeholder="F.eks. Aaben"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Isoleret position</label>
-                  <input
-                    type="text"
-                    value={newPoint.isolatedPosition}
-                    onChange={(e) => setNewPoint({ ...newPoint, isolatedPosition: e.target.value })}
-                    placeholder="F.eks. Lukket + laast"
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Noter</label>
-                <textarea
-                  value={newPoint.notes}
-                  onChange={(e) => setNewPoint({ ...newPoint, notes: e.target.value })}
-                  placeholder="Eventuelle noter..."
-                  rows={2}
-                />
-              </div>
-
-              <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowPointModal(false)}>
-                  Annuller
-                </button>
-                <button type="submit" className="btn-primary">
-                  <FiPlusCircle />
-                  Tilfoej punkt
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+          {/* Resize Handle */}
+          <div
+            className="sidebar-resize-handle"
+            onMouseDown={handleResizeStart}
+            title="Træk for at ændre størrelse"
+          />
+        </>
       )}
     </aside>
   );

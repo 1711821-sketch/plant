@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { FiZoomIn, FiZoomOut, FiMaximize } from 'react-icons/fi';
 import { PdfViewer } from './PdfViewer';
 import { AnnotationCanvas } from './AnnotationCanvas';
 import { IsolationCanvas } from './IsolationCanvas';
@@ -31,7 +32,7 @@ export function DiagramView({
   onIsolationPointCreate,
   onIsolationPointMove,
 }: DiagramViewProps) {
-  const { diagrams, currentDiagramId, zoom, zoomIn, zoomOut, setZoom, activeInspectionType } = useStore();
+  const { diagrams, currentDiagramId, zoom, zoomIn, zoomOut, setZoom, resetZoom, activeInspectionType } = useStore();
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -155,6 +156,40 @@ export function DiagramView({
             />
           </div>
         )}
+      </div>
+
+      {/* Floating Zoom Controls - always visible */}
+      <div className="zoom-controls-floating">
+        <button
+          className="zoom-btn"
+          onClick={zoomOut}
+          title="Zoom ud (-)"
+          disabled={zoom <= 0.25}
+        >
+          <FiZoomOut />
+        </button>
+        <button
+          className="zoom-btn zoom-display"
+          onClick={resetZoom}
+          title="Nulstil zoom (0)"
+        >
+          {Math.round(zoom * 100)}%
+        </button>
+        <button
+          className="zoom-btn"
+          onClick={zoomIn}
+          title="Zoom ind (+)"
+          disabled={zoom >= 4}
+        >
+          <FiZoomIn />
+        </button>
+        <button
+          className="zoom-btn"
+          onClick={resetZoom}
+          title="Tilpas til vindue"
+        >
+          <FiMaximize />
+        </button>
       </div>
     </div>
   );
