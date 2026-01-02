@@ -119,44 +119,6 @@ export function TerminalPage() {
     loadTerminal();
   };
 
-  const toggleLocationExpand = async (locationId: string) => {
-    const location = locations.find(l => l.id === locationId);
-    if (!location) return;
-
-    // If already expanded, just collapse
-    if (location.isExpanded) {
-      setLocations(prev => prev.map(l =>
-        l.id === locationId ? { ...l, isExpanded: false } : l
-      ));
-      return;
-    }
-
-    // If diagrams already loaded, just expand
-    if (location.diagrams) {
-      setLocations(prev => prev.map(l =>
-        l.id === locationId ? { ...l, isExpanded: true } : l
-      ));
-      return;
-    }
-
-    // Load diagrams
-    setLocations(prev => prev.map(l =>
-      l.id === locationId ? { ...l, isLoading: true } : l
-    ));
-
-    const { data } = await locationApi.getOne(locationId);
-    if (data) {
-      setLocations(prev => prev.map(l =>
-        l.id === locationId
-          ? { ...l, diagrams: data.diagrams, isExpanded: true, isLoading: false }
-          : l
-      ));
-    } else {
-      setLocations(prev => prev.map(l =>
-        l.id === locationId ? { ...l, isLoading: false } : l
-      ));
-    }
-  };
 
   if (isLoading) {
     return (
@@ -237,7 +199,7 @@ export function TerminalPage() {
                   >
                     <div
                       className="location-accordion-header"
-                      onClick={() => location.diagram_count > 0 && toggleLocationExpand(location.id)}
+                      onClick={() => navigate(`/location/${location.id}`)}
                     >
                       <div className="location-expand-icon">
                         {location.diagram_count > 0 ? (
