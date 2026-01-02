@@ -1471,6 +1471,71 @@ body {
   color: white;
 }
 
+/* Stroke width control in toolbar */
+.stroke-width-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stroke-width-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.stroke-width-label svg {
+  color: var(--text-muted);
+}
+
+.stroke-width-value {
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 36px;
+}
+
+.stroke-width-slider {
+  width: 80px;
+  height: 4px;
+  appearance: none;
+  background: var(--bg-dark);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+}
+
+.stroke-width-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3);
+  transition: transform 0.15s ease;
+}
+
+.stroke-width-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.stroke-width-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--primary);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3);
+}
+
+.stroke-width-slider:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ============ DIAGRAM VIEW ============ */
 .diagram-view {
   flex: 1;

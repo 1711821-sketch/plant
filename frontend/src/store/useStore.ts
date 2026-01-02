@@ -19,6 +19,12 @@ interface AppState {
   // Zoom
   zoom: number;
 
+  // Stroke width for drawing
+  strokeWidth: number;
+
+  // Pan offset for diagram
+  panOffset: { x: number; y: number };
+
   // Selected annotation
   selectedAnnotationId: string | null;
 
@@ -33,6 +39,7 @@ interface AppState {
   fetchDiagrams: () => Promise<void>;
   fetchDiagram: (id: string) => Promise<void>;
   uploadDiagram: (file: File, name?: string) => Promise<void>;
+  replaceDiagramPdf: (id: string, file: File) => Promise<void>;
   deleteDiagram: (id: string) => Promise<void>;
   setCurrentDiagram: (id: string | null) => void;
 
@@ -47,6 +54,9 @@ interface AppState {
   zoomIn: () => void;
   zoomOut: () => void;
   resetZoom: () => void;
+  setStrokeWidth: (width: number) => void;
+  setPanOffset: (offset: { x: number; y: number }) => void;
+  resetPan: () => void;
   clearError: () => void;
   toggleLock: () => void;
   setLocked: (locked: boolean) => void;
@@ -62,6 +72,8 @@ export const useStore = create<AppState>()(
   isDrawing: false,
   currentTool: 'select',
   zoom: 1,
+  strokeWidth: 14,
+  panOffset: { x: 0, y: 0 },
   selectedAnnotationId: null,
   isLocked: false,
   activeInspectionType: 'pipe',
@@ -142,6 +154,24 @@ export const useStore = create<AppState>()(
       set((state) => ({
         diagrams: [...state.diagrams, diagram],
         currentDiagramId: diagram.id,
+        isLoading: false,
+      }));
+    }
+  },
+
+  replaceDiagramPdf: async (id: string, file: File) => {
+    set({ isLoading: true, error: null });
+    const { data, error } = await diagramApi.replacePdf(id, file);
+    if (error) {
+      set({ error, isLoading: false });
+    } else if (data) {
+      // Update the diagram's pdfUrl in state
+      set((state) => ({
+        diagrams: state.diagrams.map((d) =>
+          d.id === id
+            ? { ...d, pdfUrl: getPdfUrl(data.pdf_filename), updatedAt: data.updated_at }
+            : d
+        ),
         isLoading: false,
       }));
     }
@@ -270,7 +300,10 @@ export const useStore = create<AppState>()(
   setZoom: (zoom) => set({ zoom: Math.min(Math.max(zoom, 0.25), 4) }),
   zoomIn: () => set((state) => ({ zoom: Math.min(state.zoom * 1.25, 4) })),
   zoomOut: () => set((state) => ({ zoom: Math.max(state.zoom / 1.25, 0.25) })),
-  resetZoom: () => set({ zoom: 1 }),
+  resetZoom: () => set({ zoom: 1, panOffset: { x: 0, y: 0 } }),
+  setStrokeWidth: (width) => set({ strokeWidth: Math.min(Math.max(width, 4), 40) }),
+  setPanOffset: (offset) => set({ panOffset: offset }),
+  resetPan: () => set({ panOffset: { x: 0, y: 0 } }),
   clearError: () => set({ error: null }),
   toggleLock: () => set((state) => ({
     isLocked: !state.isLocked,

@@ -154,6 +154,16 @@ export const diagramApi = {
       body: JSON.stringify(data),
     }),
 
+  replacePdf: async (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('pdf', file);
+
+    return request<any>(`/api/diagrams/${id}/replace-pdf`, {
+      method: 'PUT',
+      body: formData,
+    });
+  },
+
   delete: (id: string) =>
     request<{ success: boolean }>(`/api/diagrams/${id}`, {
       method: 'DELETE',

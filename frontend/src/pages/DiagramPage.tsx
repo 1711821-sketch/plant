@@ -21,6 +21,7 @@ export function DiagramPage() {
   const initialPlanId = searchParams.get('planId');
 
   const [user, setUser] = useState<User | null>(null);
+  const replacePdfInputRef = useRef<HTMLInputElement>(null);
   const {
     fetchDiagram,
     diagrams,
@@ -30,6 +31,7 @@ export function DiagramPage() {
     clearError,
     setLocked,
     activeInspectionType,
+    replaceDiagramPdf,
   } = useStore();
 
   const isAdmin = user?.role === 'admin';
@@ -80,6 +82,36 @@ export function DiagramPage() {
 
   const handleUploadPdf = () => {
     // Not used on this page since we're viewing existing diagram
+  };
+
+  // Replace PDF handler
+  const handleReplacePdf = () => {
+    // Show confirmation and trigger file input
+    if (confirm('Er du sikker på at du vil erstatte PDF-tegningen?\n\nBemærk: Alle eksisterende markeringer bibeholdes, men deres position kan være forkert hvis den nye tegning har en anden layout.')) {
+      replacePdfInputRef.current?.click();
+    }
+  };
+
+  const handleReplacePdfConfirm = async (file: File) => {
+    if (!currentDiagramId) return;
+
+    await replaceDiagramPdf(currentDiagramId, file);
+
+    // Refresh diagram to get new PDF
+    if (diagramId) {
+      await fetchDiagram(diagramId);
+    }
+  };
+
+  const handleReplacePdfFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await handleReplacePdfConfirm(file);
+    }
+    // Reset input
+    if (replacePdfInputRef.current) {
+      replacePdfInputRef.current.value = '';
+    }
   };
 
   // Isolation callbacks
@@ -227,7 +259,21 @@ export function DiagramPage() {
         </div>
       </header>
 
-      {isAdmin && !isSikringsplanMode && <Toolbar onUploadPdf={handleUploadPdf} />}
+      {isAdmin && !isSikringsplanMode && (
+        <Toolbar
+          onUploadPdf={handleUploadPdf}
+          onReplacePdf={handleReplacePdf}
+        />
+      )}
+
+      {/* Hidden file input for PDF replacement */}
+      <input
+        ref={replacePdfInputRef}
+        type="file"
+        accept="application/pdf"
+        style={{ display: 'none' }}
+        onChange={handleReplacePdfFileSelect}
+      />
 
       <div className="diagram-workspace" ref={diagramContainerRef}>
         <DiagramView

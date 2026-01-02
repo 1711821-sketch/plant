@@ -450,6 +450,39 @@ app.put('/api/diagrams/:id', requireAdmin, (req, res) => {
   }
 });
 
+// Replace PDF for existing diagram - admin only
+app.put('/api/diagrams/:id/replace-pdf', requireAdmin, upload.single('pdf'), (req, res) => {
+  try {
+    const diagram = db.prepare('SELECT * FROM diagrams WHERE id = ?').get(req.params.id) as DiagramRow | undefined;
+
+    if (!diagram) {
+      return res.status(404).json({ error: 'Diagram ikke fundet' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'Ingen PDF-fil uploadet' });
+    }
+
+    // Delete old PDF file
+    const oldPdfPath = path.join(uploadsDir, diagram.pdf_filename);
+    if (fs.existsSync(oldPdfPath)) {
+      fs.unlinkSync(oldPdfPath);
+    }
+
+    // Update database with new PDF filename
+    const now = new Date().toISOString();
+    db.prepare(`
+      UPDATE diagrams SET pdf_filename = ?, updated_at = ? WHERE id = ?
+    `).run(req.file.filename, now, req.params.id);
+
+    const updatedDiagram = db.prepare('SELECT * FROM diagrams WHERE id = ?').get(req.params.id);
+    res.json(updatedDiagram);
+  } catch (error) {
+    console.error('Error replacing diagram PDF:', error);
+    res.status(500).json({ error: 'Kunne ikke erstatte PDF' });
+  }
+});
+
 // Delete diagram - admin only
 app.delete('/api/diagrams/:id', requireAdmin, (req, res) => {
   try {

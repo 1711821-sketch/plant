@@ -1,11 +1,12 @@
 import { useStore } from '../store/useStore';
-import { FiMousePointer, FiEdit3, FiMove, FiUpload, FiTrash2, FiZoomIn, FiZoomOut, FiMaximize, FiLock, FiUnlock } from 'react-icons/fi';
+import { FiMousePointer, FiEdit3, FiMove, FiUpload, FiTrash2, FiZoomIn, FiZoomOut, FiMaximize, FiLock, FiUnlock, FiRefreshCw } from 'react-icons/fi';
 
 interface ToolbarProps {
   onUploadPdf: () => void;
+  onReplacePdf?: () => void;
 }
 
-export function Toolbar({ onUploadPdf }: ToolbarProps) {
+export function Toolbar({ onUploadPdf, onReplacePdf }: ToolbarProps) {
   const {
     currentTool,
     setCurrentTool,
@@ -16,6 +17,8 @@ export function Toolbar({ onUploadPdf }: ToolbarProps) {
     zoomIn,
     zoomOut,
     resetZoom,
+    strokeWidth,
+    setStrokeWidth,
     isLocked,
     toggleLock,
     diagrams,
@@ -88,12 +91,34 @@ export function Toolbar({ onUploadPdf }: ToolbarProps) {
         <button
           className={`toolbar-btn ${currentTool === 'pan' ? 'active' : ''}`}
           onClick={() => setCurrentTool('pan')}
-          title="Panorer (P)"
+          title="Panorer (P) - Hold mellemrum nede"
           disabled={isLocked}
         >
           <FiMove />
           <span>Panorer</span>
         </button>
+      </div>
+
+      <div className="toolbar-divider" />
+
+      {/* Stroke Width Control */}
+      <div className="toolbar-group stroke-width-group">
+        <label className="stroke-width-label" title="Stregtykkelse">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="4" y1="12" x2="20" y2="12" strokeWidth={strokeWidth / 4} />
+          </svg>
+          <span className="stroke-width-value">{strokeWidth}px</span>
+        </label>
+        <input
+          type="range"
+          min="4"
+          max="40"
+          value={strokeWidth}
+          onChange={(e) => setStrokeWidth(Number(e.target.value))}
+          className="stroke-width-slider"
+          title={`Stregtykkelse: ${strokeWidth}px`}
+          disabled={isLocked}
+        />
       </div>
 
       <div className="toolbar-divider" />
@@ -139,10 +164,17 @@ export function Toolbar({ onUploadPdf }: ToolbarProps) {
 
       {/* File & Edit Actions */}
       <div className="toolbar-group">
-        <button className="toolbar-btn" onClick={onUploadPdf} title="Upload PDF">
+        <button className="toolbar-btn" onClick={onUploadPdf} title="Upload ny PDF tegning">
           <FiUpload />
           <span>Upload PDF</span>
         </button>
+
+        {currentDiagramId && onReplacePdf && (
+          <button className="toolbar-btn" onClick={onReplacePdf} title="Erstat PDF tegning">
+            <FiRefreshCw />
+            <span>Erstat PDF</span>
+          </button>
+        )}
 
         {selectedAnnotationId && (
           <button className="toolbar-btn danger" onClick={handleDelete} title="Slet markering">

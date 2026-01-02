@@ -32,9 +32,12 @@ export function DiagramView({
   onIsolationPointCreate,
   onIsolationPointMove,
 }: DiagramViewProps) {
-  const { diagrams, currentDiagramId, zoom, zoomIn, zoomOut, setZoom, resetZoom, activeInspectionType } = useStore();
+  const { diagrams, currentDiagramId, zoom, zoomIn, zoomOut, setZoom, resetZoom, activeInspectionType, currentTool, panOffset, setPanOffset } = useStore();
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [spacePressed, setSpacePressed] = useState(false);
 
   const currentDiagram = diagrams.find((d) => d.id === currentDiagramId);
 
@@ -90,12 +93,54 @@ export function DiagramView({
       } else if (e.key === '0') {
         e.preventDefault();
         setZoom(1);
+      } else if (e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        setSpacePressed(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === ' ' || e.key === 'Spacebar') {
+        setSpacePressed(false);
+        setIsPanning(false);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
   }, [zoomIn, zoomOut, setZoom]);
+
+  // Pan mouse handlers
+  const handlePanMouseDown = useCallback((e: React.MouseEvent) => {
+    if (currentTool === 'pan' || spacePressed) {
+      e.preventDefault();
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+    }
+  }, [currentTool, spacePressed, panOffset]);
+
+  const handlePanMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isPanning) {
+      const newX = e.clientX - panStart.x;
+      const newY = e.clientY - panStart.y;
+      setPanOffset({ x: newX, y: newY });
+    }
+  }, [isPanning, panStart, setPanOffset]);
+
+  const handlePanMouseUp = useCallback(() => {
+    setIsPanning(false);
+  }, []);
+
+  // Cursor style based on pan state
+  const getCursorStyle = () => {
+    if (isPanning) return 'grabbing';
+    if (currentTool === 'pan' || spacePressed) return 'grab';
+    return 'default';
+  };
 
   if (!currentDiagram) {
     return (
@@ -109,11 +154,19 @@ export function DiagramView({
   }
 
   return (
-    <div className="diagram-view" ref={containerRef}>
+    <div
+      className="diagram-view"
+      ref={containerRef}
+      onMouseDown={handlePanMouseDown}
+      onMouseMove={handlePanMouseMove}
+      onMouseUp={handlePanMouseUp}
+      onMouseLeave={handlePanMouseUp}
+      style={{ cursor: getCursorStyle() }}
+    >
       <div
         className="diagram-container"
         style={{
-          transform: `scale(${zoom})`,
+          transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
           transformOrigin: 'top left',
         }}
       >

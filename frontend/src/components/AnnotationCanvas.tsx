@@ -52,6 +52,7 @@ export function AnnotationCanvas({ width, height, diagramId, annotations, zoom }
     setSelectedAnnotation,
     isLocked,
     activeInspectionType,
+    strokeWidth,
   } = useStore();
 
   // Use the global active inspection type for new annotations
@@ -90,7 +91,7 @@ export function AnnotationCanvas({ width, height, diagramId, annotations, zoom }
       kksNumber: `${kksPrefix}-${String(typeCount + 1).padStart(3, '0')}`,
       points: points,
       color: defaultColor,
-      strokeWidth: 14,
+      strokeWidth: strokeWidth,
       status: 'not_inspected',
     };
 
@@ -146,7 +147,8 @@ export function AnnotationCanvas({ width, height, diagramId, annotations, zoom }
       }
 
       ctx.strokeStyle = getHighlightColor(annotation.status, annotation.annotationType);
-      ctx.lineWidth = annotation.id === selectedAnnotationId ? 18 : 14;
+      const annStrokeWidth = annotation.strokeWidth || 14;
+      ctx.lineWidth = annotation.id === selectedAnnotationId ? annStrokeWidth + 4 : annStrokeWidth;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.globalCompositeOperation = 'multiply';
@@ -200,7 +202,7 @@ export function AnnotationCanvas({ width, height, diagramId, annotations, zoom }
         ctx.lineTo(stroke[i].x, stroke[i].y);
       }
       ctx.strokeStyle = TYPE_HIGHLIGHT_COLORS[selectedAnnotationType];
-      ctx.lineWidth = 14;
+      ctx.lineWidth = strokeWidth;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.globalCompositeOperation = 'multiply';
@@ -223,7 +225,7 @@ export function AnnotationCanvas({ width, height, diagramId, annotations, zoom }
       }
 
       ctx.strokeStyle = TYPE_HIGHLIGHT_COLORS[selectedAnnotationType];
-      ctx.lineWidth = 14;
+      ctx.lineWidth = strokeWidth;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.globalCompositeOperation = 'multiply';
@@ -259,7 +261,7 @@ export function AnnotationCanvas({ width, height, diagramId, annotations, zoom }
       }
     }
 
-  }, [annotations, currentStrokes, activeStroke, linePoints, previewPoint, selectedAnnotationId, isLocked, width, height, selectedAnnotationType]);
+  }, [annotations, currentStrokes, activeStroke, linePoints, previewPoint, selectedAnnotationId, isLocked, width, height, selectedAnnotationType, strokeWidth]);
 
   useEffect(() => {
     draw();
