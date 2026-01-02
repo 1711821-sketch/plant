@@ -163,6 +163,7 @@ export const useStore = create<AppState>()(
 
   addAnnotation: async (diagramId, annotationData) => {
     const { data, error } = await annotationApi.create(diagramId, {
+      annotationType: annotationData.annotationType,
       kksNumber: annotationData.kksNumber,
       points: annotationData.points,
       color: annotationData.color,
