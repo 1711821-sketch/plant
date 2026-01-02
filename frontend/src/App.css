@@ -1661,6 +1661,31 @@ body {
   line-height: 1;
 }
 
+/* Annotation type indicator (read-only badge) */
+.annotation-type-indicator {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+}
+
+.annotation-type-indicator .type-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+}
+
+.annotation-type-indicator .type-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
 /* ============ PDF VIEWER ============ */
 .pdf-viewer {
   position: relative;

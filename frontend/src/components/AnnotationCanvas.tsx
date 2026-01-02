@@ -45,16 +45,17 @@ export function AnnotationCanvas({ width, height, diagramId, annotations, zoom }
   const [linePoints, setLinePoints] = useState<{ x: number; y: number }[]>([]);
   const [previewPoint, setPreviewPoint] = useState<{ x: number; y: number } | null>(null);
 
-  // Selected annotation type for new annotations
-  const [selectedAnnotationType, setSelectedAnnotationType] = useState<AnnotationType>('pipe');
-
   const {
     currentTool,
     selectedAnnotationId,
     addAnnotation,
     setSelectedAnnotation,
     isLocked,
+    activeInspectionType,
   } = useStore();
+
+  // Use the global active inspection type for new annotations
+  const selectedAnnotationType = activeInspectionType;
 
   // Flatten all strokes into single path for saving
   const getAllPoints = useCallback(() => {
@@ -448,10 +449,11 @@ export function AnnotationCanvas({ width, height, diagramId, annotations, zoom }
 
   // Get drawing mode hint text
   const getHintText = () => {
+    const typeName = ANNOTATION_TYPE_LABELS[selectedAnnotationType].toLowerCase();
     if (currentTool === 'draw-line') {
       return 'Klik for at tilføje punkter, dobbeltklik for at afslutte, Ctrl+Z for at fortryde punkt';
     }
-    return 'Tegn flere streger på samme rør, tryk Gem når færdig';
+    return `Tegn flere streger på samme ${typeName}, tryk Gem når færdig`;
   };
 
   return (
@@ -477,27 +479,22 @@ export function AnnotationCanvas({ width, height, diagramId, annotations, zoom }
         </div>
       )}
 
-      {/* Annotation type selector - show when drawing tools active */}
+      {/* Active type indicator - show when drawing tools active */}
       {!isLocked && (currentTool === 'draw-free' || currentTool === 'draw-line') && (
-        <div className="annotation-type-selector">
-          <span className="type-label">Type:</span>
-          {(['pipe', 'tank', 'component'] as AnnotationType[]).map((type) => (
-            <button
-              key={type}
-              className={`type-btn ${selectedAnnotationType === type ? 'active' : ''}`}
-              onClick={() => setSelectedAnnotationType(type)}
-              style={{
-                '--type-color': ANNOTATION_TYPE_COLORS[type],
-              } as React.CSSProperties}
-            >
-              <span className="type-icon">
-                {type === 'pipe' && '━'}
-                {type === 'tank' && '⬡'}
-                {type === 'component' && '⚙'}
-              </span>
-              {ANNOTATION_TYPE_LABELS[type]}
-            </button>
-          ))}
+        <div className="annotation-type-indicator">
+          <span
+            className="type-badge"
+            style={{
+              backgroundColor: ANNOTATION_TYPE_COLORS[selectedAnnotationType],
+            }}
+          >
+            <span className="type-icon">
+              {selectedAnnotationType === 'pipe' && '━'}
+              {selectedAnnotationType === 'tank' && '⬡'}
+              {selectedAnnotationType === 'component' && '⚙'}
+            </span>
+            {ANNOTATION_TYPE_LABELS[selectedAnnotationType]}
+          </span>
         </div>
       )}
 
